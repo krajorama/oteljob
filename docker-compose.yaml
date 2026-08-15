@@ -1,0 +1,19 @@
+services:
+  oteljob:
+    build: .
+    stdin_open: true
+    networks:
+      - otelnet
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.158.0
+    depends_on:
+      - oteljob
+    volumes:
+      - ./otelcol-config.compose.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - otelnet
+
+networks:
+  otelnet:
+    driver: bridge
