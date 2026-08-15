@@ -79,6 +79,7 @@ func logOTelModel(ctx context.Context, reader sdkmetric.Reader) {
 		return
 	}
 
+	log.Printf("OTel metric data model")
 	log.Printf("resource attributes: %s", rm.Resource.Encoded(attribute.DefaultEncoder()))
 
 	for _, sm := range rm.ScopeMetrics {
@@ -162,7 +163,7 @@ func main() {
 		rec := httptest.NewRecorder()
 		metricsHandler.ServeHTTP(rec, r)
 		if rec.Code == http.StatusOK {
-			log.Printf("/metrics response:\n%s\nend response", filterMetricsForLog(rec.Body.String()))
+			log.Printf("/metrics response SDK exposition:\n%s\nend response", filterMetricsForLog(rec.Body.String()))
 		}
 		maps.Copy(w.Header(), rec.Header())
 		w.WriteHeader(rec.Code)
