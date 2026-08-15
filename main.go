@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -17,8 +18,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/metric"
 
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -45,7 +48,7 @@ func initResource() *sdkresource.Resource {
 	return resource
 }
 
-func initMeterProvider() *sdkmetric.MeterProvider {
+func initMeterProvider() (*sdkmetric.MeterProvider, sdkmetric.Reader) {
 	var opts []prometheus.Option
 	if *noTranslation {
 		opts = append(opts, prometheus.WithTranslationStrategy(otlptranslator.NoTranslation))
@@ -53,7 +56,7 @@ func initMeterProvider() *sdkmetric.MeterProvider {
 	exporter, err := prometheus.New(opts...)
 	if err != nil {
 		log.Fatalf("new prometheus exporter failed: %v", err)
-		return nil
+		return nil, nil
 	}
 
 
@@ -63,13 +66,89 @@ func initMeterProvider() *sdkmetric.MeterProvider {
 	)
 
 	otel.SetMeterProvider(mp)
-	return mp
+	return mp, exporter
+}
+
+// logOTelModel dumps the raw OTel data model as the SDK sees it: resource
+// attributes, and for each meter (scope) its instruments' data points with
+// their attributes, before any Prometheus-specific translation happens.
+func logOTelModel(ctx context.Context, reader sdkmetric.Reader) {
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(ctx, &rm); err != nil {
+		log.Printf("collecting OTel model failed: %v", err)
+		return
+	}
+
+	log.Printf("resource attributes: %s", rm.Resource.Encoded(attribute.DefaultEncoder()))
+
+	for _, sm := range rm.ScopeMetrics {
+		log.Printf("meter %q (version %q)", sm.Scope.Name, sm.Scope.Version)
+		for _, m := range sm.Metrics {
+			switch data := m.Data.(type) {
+			case metricdata.Gauge[float64]:
+				for _, dp := range data.DataPoints {
+					log.Printf("  %s{%s} = %v", m.Name, dp.Attributes.Encoded(attribute.DefaultEncoder()), dp.Value)
+				}
+			case metricdata.Sum[float64]:
+				for _, dp := range data.DataPoints {
+					log.Printf("  %s{%s} = %v", m.Name, dp.Attributes.Encoded(attribute.DefaultEncoder()), dp.Value)
+				}
+			case metricdata.Histogram[float64]:
+				for _, dp := range data.DataPoints {
+					log.Printf("  %s{%s} count=%d sum=%v", m.Name, dp.Attributes.Encoded(attribute.DefaultEncoder()), dp.Count, dp.Sum)
+				}
+			default:
+				log.Printf("  %s: unhandled aggregation type %T", m.Name, m.Data)
+			}
+		}
+	}
+}
+
+// filteredMetricsPrefixes lists metric family prefixes to omit from the
+// "/metrics response" debug log, to cut down noise from Go runtime and
+// promhttp's own instrumentation.
+var filteredMetricsPrefixes = []string{"go_", "process_", "promhttp_"}
+
+// metricNameFromLine extracts the metric name from a line of Prometheus text
+// exposition format, or "" if the line has no associated metric name.
+func metricNameFromLine(line string) string {
+	switch {
+	case strings.HasPrefix(line, "# HELP "), strings.HasPrefix(line, "# TYPE "):
+		fields := strings.SplitN(line, " ", 4)
+		if len(fields) >= 3 {
+			return fields[2]
+		}
+		return ""
+	case line == "", strings.HasPrefix(line, "#"):
+		return ""
+	default:
+		return line[:strings.IndexAny(line+"{", "{ ")]
+	}
+}
+
+func filterMetricsForLog(body string) string {
+	lines := strings.Split(body, "\n")
+	kept := lines[:0]
+	for _, line := range lines {
+		name := metricNameFromLine(line)
+		skip := false
+		for _, prefix := range filteredMetricsPrefixes {
+			if strings.HasPrefix(name, prefix) {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			kept = append(kept, line)
+		}
+	}
+	return strings.Join(kept, "\n")
 }
 
 func main() {
 	flag.Parse()
 
-	mp := initMeterProvider()
+	mp, reader := initMeterProvider()
 	defer func() {
 		if err := mp.Shutdown(context.Background()); err != nil {
 			log.Printf("Error shutting down meter provider: %v", err)
@@ -79,10 +158,11 @@ func main() {
 	metricsHandler := promhttp.Handler()
 	http.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("/metrics called by %s, Accept: %s", r.RemoteAddr, r.Header.Get("Accept"))
+		logOTelModel(r.Context(), reader)
 		rec := httptest.NewRecorder()
 		metricsHandler.ServeHTTP(rec, r)
 		if rec.Code == http.StatusOK {
-			log.Printf("/metrics response: %s", rec.Body.String())
+			log.Printf("/metrics response:\n%s\nend response", filterMetricsForLog(rec.Body.String()))
 		}
 		maps.Copy(w.Header(), rec.Header())
 		w.WriteHeader(rec.Code)
@@ -101,13 +181,15 @@ func main() {
 		log.Fatalf("new histogram failed: %v", err)
 		return
 	}
-	receivedSamples.Add(context.Background(), 1.0)
+	sampleAttrs := metric.WithAttributes(attribute.String("a.a", "b"))
+	receivedSamples.Add(context.Background(), 1.0, sampleAttrs)
 
 
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for scanner.Scan() {
-		receivedSamples.Add(context.Background(), 1.0)
+		sampleAttrs := metric.WithAttributes(attribute.String("a.a", "b"))
+	receivedSamples.Add(context.Background(), 1.0, sampleAttrs)
 		if scanner.Err() != nil {
 			break
 		}
