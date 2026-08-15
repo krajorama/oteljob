@@ -5,8 +5,10 @@ import (
 	"context"
 	"flag"
 	"log"
+	"maps"
 
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"sync"
 
@@ -74,7 +76,18 @@ func main() {
 		}
 	}()
 
-	http.Handle("/metrics", promhttp.Handler())
+	metricsHandler := promhttp.Handler()
+	http.Handle("/metrics", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("/metrics called by %s, Accept: %s", r.RemoteAddr, r.Header.Get("Accept"))
+		rec := httptest.NewRecorder()
+		metricsHandler.ServeHTTP(rec, r)
+		if rec.Code == http.StatusOK {
+			log.Printf("/metrics response: %s", rec.Body.String())
+		}
+		maps.Copy(w.Header(), rec.Header())
+		w.WriteHeader(rec.Code)
+		w.Write(rec.Body.Bytes())
+	}))
 	go func() {
 		if err := http.ListenAndServe(":9464", nil); err != nil {
 			log.Fatalf("metrics server failed: %v", err)
