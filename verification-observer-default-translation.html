@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Verification: Observer Use Case, Default Translation Strategy</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+background-color: #1a1a1a;
+border: none;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+  <style>
+:root { color-scheme: light dark; }
+html, body { margin: 0; padding: 0; }
+body {
+max-width: 100%;
+padding: 1.5rem 2rem 4rem;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+line-height: 1.5;
+}
+header#title-block-header { display: none; }
+h1 { font-size: 1.6rem; border-bottom: 2px solid currentColor; padding-bottom: 0.4rem; }
+h2 { font-size: 1.25rem; margin-top: 2rem; }
+code {
+font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+font-size: 0.85em;
+background: rgba(127,127,127,0.15);
+padding: 0.1em 0.3em;
+border-radius: 3px;
+}
+table {
+width: 100%;
+border-collapse: collapse;
+table-layout: fixed;
+margin: 1.5rem 0;
+font-size: 0.85rem;
+}
+th, td {
+border: 1px solid rgba(127,127,127,0.4);
+padding: 0.6rem 0.7rem;
+text-align: left;
+vertical-align: top;
+word-wrap: break-word;
+overflow-wrap: anywhere;
+}
+th {
+background: rgba(127,127,127,0.15);
+font-size: 0.9rem;
+}
+
+th:first-child, td:first-child { width: 12%; }
+tr td code, tr td strong code { white-space: pre-wrap; }
+section[role="doc-endnotes"] {
+margin-top: 3rem;
+padding-top: 1rem;
+border-top: 1px solid rgba(127,127,127,0.4);
+font-size: 0.85rem;
+}
+section[role="doc-endnotes"] ol { padding-left: 1.2rem; }
+section[role="doc-endnotes"] li { margin-bottom: 0.8rem; }
+a { color: #3b82f6; }
+strong { color: inherit; }
+td strong, th strong { background: rgba(255, 200, 0, 0.25); padding: 0 0.15em; border-radius: 2px; }
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Verification: Observer Use Case, Default Translation
+Strategy</h1>
+</header>
+<h1 id="verification-observer-use-case-default-translation-strategy">Verification:
+Observer Use Case, Default Translation Strategy</h1>
+<p>Verifies <a href="UseCases.md">UseCases.md</a>’s use case 3 — one
+process (<a href="observer/main.go">observer/main.go</a>) reporting
+metrics about two other applications it observes, each with its own
+<code>job</code>/<code>instance</code> identity — under the SDK’s
+<strong>default</strong> translation strategy, across all four collector
+options: Today (no gates), and the
+<code>krajo/job-instance-persistence</code> fork’s Options A/B/C.
+Companion to <a href="verification-observer-notranslation.md">verification-observer-notranslation.md</a>
+and the two single-app reports.</p>
+<p><strong>Implementation</strong>: two
+<code>sdkmetric.MeterProvider</code>s share one
+<code>prometheus.Registry</code>. Each has its own Resource —
+<code>service.name</code>/<code>service.instance.id</code> (the app’s
+real identity) plus custom <code>job</code>/<code>instance</code>
+attributes (the identity the observer assigns it) — and its own exporter
+constructed with <code>WithRegisterer(sharedRegistry)</code> and
+<code>WithResourceAsConstantLabels(attribute.NewAllowKeysFilter(&quot;job&quot;, &quot;instance&quot;))</code>.</p>
+<p><strong>Setup</strong>: App 1 —
+<code>service.name=&quot;my_service1&quot;</code>,
+<code>service.instance.id=&quot;my_id1&quot;</code>, <code>job=&quot;my_job1&quot;</code>,
+<code>instance=&quot;my_instance1&quot;</code>, counter value <code>1</code>. App
+2 — same shape with <code>_2</code>/<code>2</code>. Both: meter
+<code>foo</code>, <code>Float64Counter(&quot;received_samples&quot;)</code> with
+attribute <code>a.a=&quot;b&quot;</code>. Scraped by the collector as
+<code>job_name=&quot;observer_job&quot;</code>, target <code>observer:9464</code>,
+<strong><code>honor_labels: true</code></strong>. Egress via
+<code>prometheus_remote_write</code>. Each of the four columns was
+actually run
+(<code>OTELCOL_FEATURE_GATES=&lt;gates&gt; docker compose --profile observer up -d --force-recreate observer otel-collector prometheus</code>),
+with Prometheus’s storage wiped between captures.</p>
+<p><strong>Methodology note</strong>:
+<code>otelcol-config.compose.yaml</code> keeps <em>both</em> scrape jobs
+(<code>my_job</code> → <code>oteljob:9464</code>,
+<code>observer_job</code> → <code>observer:9464</code>) configured
+regardless of active profile. Under the <code>observer</code> profile
+<code>oteljob</code> doesn’t exist, so <code>my_job</code> fails every
+cycle — but the failed target still gets a real (not stale)
+<code>up=0</code> data point, Resource, and synthesized
+<code>target_info</code>, for the same reason documented in <a href="verification-observer-notranslation.md">verification-observer.md</a>’s
+predecessor: <code>addResourceTargetInfo</code> unconditionally
+synthesizes <code>target_info</code> from any Resource with a data
+point. It’s excluded from the tables below since it isn’t part of this
+use case. Because <code>CreateResource</code> runs once per unique
+<code>(job, instance)</code> pair found in the scrape (not once per
+scrape target — <code>honor_labels</code> preserves each app’s own
+labels), the collector’s per-app Options A/B/C behavior applies
+independently to App 1’s Resource, App 2’s Resource, <em>and</em> the
+scrape-metadata Resource
+(<code>observer_job</code>/<code>observer:9464</code>, which carries
+only <code>up</code>/<code>scrape_*</code> metrics that have no per-app
+<code>job</code>/<code>instance</code> override).</p>
+<h2 id="results-app-1-shown-app-2-is-byte-for-byte-the-same-shape-with-2-in-place-of-1-throughout">Results
+(App 1 shown; App 2 is byte-for-byte the same shape with <code>2</code>
+in place of <code>1</code> throughout)</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Step</th>
+<th style="text-align: left;">Today (no gates)</th>
+<th style="text-align: left;">Option A — bare</th>
+<th style="text-align: left;">Option B — namespaced</th>
+<th style="text-align: left;">Option C — declared-first</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>1. OTel metric data model</strong>
+(in-process; option-independent)</td>
+<td style="text-align: left;"><code>Resource{service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>2. SDK Prometheus exporter
+exposition</strong> (curled <code>observer:9464/metrics</code>;
+option-independent)</td>
+<td style="text-align: left;"><code># HELP received_samples_total</code><br><code># TYPE received_samples_total counter</code><br><code>received_samples_total{a_a=&quot;b&quot;,instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,service_instance_id=&quot;my_id1&quot;,service_name=&quot;my_service1&quot;} 1</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>3. Collector
+<code>prometheusreceiver</code> → OTLP Resource (App 1)</strong> (debug
+exporter, verbosity <code>detailed</code>)</td>
+<td style="text-align: left;"><code>Resource{service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>instance=&quot;my_instance1&quot;</code></strong><code>, service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code>
+— <strong>no
+<code>service.name</code>/<code>service.instance.id</code></strong>
+(never-derive)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">— scrape-metadata Resource
+(<code>observer_job</code>, no per-app
+<code>job</code>/<code>instance</code>)</td>
+<td style="text-align: left;"><code>Resource{service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>instance=&quot;observer:9464&quot;</code></strong><code>, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code>
+— <strong>no <code>service.*</code> at all</strong>: this Resource has
+no <code>target_info</code> sample of its own to fill them in, so it’s
+genuinely service-less.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">—
+<code>Metric</code>/<code>DataPoint</code> (App 1, same block, all four
+columns)</td>
+<td style="text-align: left;"><code>Metric{name=&quot;received_samples_total&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a_a&quot;:&quot;b&quot;}, value=1}</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>4.
+<code>prometheus_remote_write</code> exporter → Prometheus series (App
+1)</strong> (queried Prometheus, <code>{path=&quot;remote_write&quot;}</code>,
+<code>my_job</code>/<code>oteljob:9464</code> excluded)</td>
+<td style="text-align: left;"><code>received_samples_total{job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;, service_name=&quot;my_service1&quot;, service_instance_id=&quot;my_id1&quot;, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code></td>
+<td style="text-align: left;"><strong>Byte-identical to Today</strong>
+on both series.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Today</strong>
+on both series.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Today</strong>
+on both series.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Net effect</strong></td>
+<td style="text-align: left;">App 1 and App 2 are cleanly distinguished
+by <code>job</code>/<code>instance</code>
+(<code>my_job1</code>/<code>my_instance1</code> vs
+<code>my_job2</code>/<code>my_instance2</code>), and each app’s real
+identity is queryable via <code>target_info</code>.</td>
+<td style="text-align: left;">Same wire output as Today; the OTLP
+Resource additionally carries an explicit
+<code>job</code>/<code>instance</code> pair (and the scrape-metadata
+Resource gains one too), invisible on the wire.</td>
+<td style="text-align: left;">Same as A, namespaced instead of
+bare.</td>
+<td style="text-align: left;"><strong>Also produces the intended
+output</strong> — but for a different reason than A/B: since App 1’s
+Resource is always “undeclared” by Option C’s never-derive rule, the
+exporter falls back to the
+<code>prometheus.job</code>/<code>prometheus.instance</code> pair, which
+happens to already hold the values the observer intended
+(<code>my_job1</code>/<code>my_instance1</code>). See <a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="footnotes">Footnotes</h2>
+<aside id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>This is the observer-specific, and rather clean,
+illustration of the design document’s point that “with never-derive in
+effect, an undeclared target yields a Resource with no
+<code>service.*</code> at all” (see the
+<code>Preserving Prometheus Job and Instance in OTLP Translation.md</code>
+doc, around line 485). The single-app reports never showed a fully
+service-less Resource because their one scrape target always had
+<em>some</em> signal it could pick up (either the app’s own
+<code>target_info</code>, or nothing to speak of); here, the
+scrape-metadata Resource has no <code>target_info</code> sample of its
+own — the two apps’ <code>target_info</code> samples get attributed to
+<em>their own</em> per-series Resources instead (see the methodology
+note) — so it’s the one Resource in this whole set of reports with no
+identity attributes at all beyond the reserved pair.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Same reasoning as
+<code>verification-default-translation.md</code>’s footnote 2: Option
+A/B’s pair-first lookup (<code>setJobAndInstanceFromPair</code>) uses
+the bare/namespaced pair verbatim when present, and here the receiver
+populated the pair and the legacy
+<code>service.name</code>/<code>service.instance.id</code> fields with
+the <em>same</em> values
+(<code>my_job1</code>/<code>my_instance1</code>), so the two are
+indistinguishable in the final series.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Same reasoning as
+<code>verification-default-translation.md</code>’s footnote 2: Option
+A/B’s pair-first lookup (<code>setJobAndInstanceFromPair</code>) uses
+the bare/namespaced pair verbatim when present, and here the receiver
+populated the pair and the legacy
+<code>service.name</code>/<code>service.instance.id</code> fields with
+the <em>same</em> values
+(<code>my_job1</code>/<code>my_instance1</code>), so the two are
+indistinguishable in the final series.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>Unlike the single-app default-translation report — where
+Option C’s exporter-side “is identity declared?” check never fires
+(because the SDK’s default strategy escapes the app’s declaration to
+<code>service_name</code>/<code>service_instance_id</code>, a key the
+check doesn’t look for) and it silently falls back to the
+<em>scrape’s</em> own <code>job</code>/<code>instance</code> — here that
+same fallback lands on the <em>correct</em> value. That’s not because
+Option C’s declared-identity detection started working: App 1’s Resource
+has no dotted <code>service.name</code>/<code>service.instance.id</code>
+at all (see Step 3), so
+<code>haveServiceName</code>/<code>haveInstanceID</code> are still both
+false and the “declared identity” branch still never fires. It’s because
+the reserved-pair fallback it uses instead
+(<code>prometheus.job</code>/<code>prometheus.instance</code>) was
+populated by <code>CreateResource</code> with
+<code>my_job1</code>/<code>my_instance1</code> — the value this specific
+use case wants — rather than a job-config-derived string. Change what
+value flows into the reserved pair (as the standalone/observer split
+does) and Option C’s fallback path produces whatever that is, correct or
+not; it isn’t reading the app’s declaration either way.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>Unlike the single-app default-translation report — where
+Option C’s exporter-side “is identity declared?” check never fires
+(because the SDK’s default strategy escapes the app’s declaration to
+<code>service_name</code>/<code>service_instance_id</code>, a key the
+check doesn’t look for) and it silently falls back to the
+<em>scrape’s</em> own <code>job</code>/<code>instance</code> — here that
+same fallback lands on the <em>correct</em> value. That’s not because
+Option C’s declared-identity detection started working: App 1’s Resource
+has no dotted <code>service.name</code>/<code>service.instance.id</code>
+at all (see Step 3), so
+<code>haveServiceName</code>/<code>haveInstanceID</code> are still both
+false and the “declared identity” branch still never fires. It’s because
+the reserved-pair fallback it uses instead
+(<code>prometheus.job</code>/<code>prometheus.instance</code>) was
+populated by <code>CreateResource</code> with
+<code>my_job1</code>/<code>my_instance1</code> — the value this specific
+use case wants — rather than a job-config-derived string. Change what
+value flows into the reserved pair (as the standalone/observer split
+does) and Option C’s fallback path produces whatever that is, correct or
+not; it isn’t reading the app’s declaration either way.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</aside>
+</body>
+</html>

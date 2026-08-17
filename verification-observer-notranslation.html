@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Verification: Observer Use Case, NoTranslation Strategy</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+background-color: #1a1a1a;
+border: none;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+  <style>
+:root { color-scheme: light dark; }
+html, body { margin: 0; padding: 0; }
+body {
+max-width: 100%;
+padding: 1.5rem 2rem 4rem;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+line-height: 1.5;
+}
+header#title-block-header { display: none; }
+h1 { font-size: 1.6rem; border-bottom: 2px solid currentColor; padding-bottom: 0.4rem; }
+h2 { font-size: 1.25rem; margin-top: 2rem; }
+code {
+font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+font-size: 0.85em;
+background: rgba(127,127,127,0.15);
+padding: 0.1em 0.3em;
+border-radius: 3px;
+}
+table {
+width: 100%;
+border-collapse: collapse;
+table-layout: fixed;
+margin: 1.5rem 0;
+font-size: 0.85rem;
+}
+th, td {
+border: 1px solid rgba(127,127,127,0.4);
+padding: 0.6rem 0.7rem;
+text-align: left;
+vertical-align: top;
+word-wrap: break-word;
+overflow-wrap: anywhere;
+}
+th {
+background: rgba(127,127,127,0.15);
+font-size: 0.9rem;
+}
+
+th:first-child, td:first-child { width: 12%; }
+tr td code, tr td strong code { white-space: pre-wrap; }
+section[role="doc-endnotes"] {
+margin-top: 3rem;
+padding-top: 1rem;
+border-top: 1px solid rgba(127,127,127,0.4);
+font-size: 0.85rem;
+}
+section[role="doc-endnotes"] ol { padding-left: 1.2rem; }
+section[role="doc-endnotes"] li { margin-bottom: 0.8rem; }
+a { color: #3b82f6; }
+strong { color: inherit; }
+td strong, th strong { background: rgba(255, 200, 0, 0.25); padding: 0 0.15em; border-radius: 2px; }
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Verification: Observer Use Case, NoTranslation
+Strategy</h1>
+</header>
+<h1 id="verification-observer-use-case-notranslation-strategy">Verification:
+Observer Use Case, <code>NoTranslation</code> Strategy</h1>
+<p>Verifies <a href="UseCases.md">UseCases.md</a>’s use case 3 — one
+process (<a href="observer/main.go">observer/main.go</a>) reporting
+metrics about two other applications it observes, each with its own
+<code>job</code>/<code>instance</code> identity — under the SDK’s
+<strong><code>NoTranslation</code></strong> strategy, across all four
+collector options: Today (no gates), and the
+<code>krajo/job-instance-persistence</code> fork’s Options A/B/C.
+Companion to <a href="verification-observer-default-translation.md">verification-observer-default-translation.md</a>.</p>
+<p><strong>Implementation and setup</strong>: identical to the
+default-translation report, with
+<code>OBSERVER_NO_TRANSLATION=true</code>. App 1 —
+<code>service.name=&quot;my_service1&quot;</code>,
+<code>service.instance.id=&quot;my_id1&quot;</code>, <code>job=&quot;my_job1&quot;</code>,
+<code>instance=&quot;my_instance1&quot;</code>, counter value <code>1</code> (App
+2: same shape with <code>_2</code>/<code>2</code>). Scraped as
+<code>job_name=&quot;observer_job&quot;</code>, target <code>observer:9464</code>,
+<code>honor_labels: true</code>, egress via
+<code>prometheus_remote_write</code>. All four columns were actually
+run, Prometheus’s storage wiped between captures. Same methodology note
+as the default-translation report applies: the inactive
+<code>my_job</code>/<code>oteljob:9464</code> scrape target’s benign
+<code>up=0</code> + synthesized <code>target_info</code> is excluded
+from the tables below.</p>
+<h2 id="results-app-1-shown-app-2-is-byte-for-byte-the-same-shape-with-2-in-place-of-1-throughout">Results
+(App 1 shown; App 2 is byte-for-byte the same shape with <code>2</code>
+in place of <code>1</code> throughout)</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Step</th>
+<th style="text-align: left;">Today (no gates)</th>
+<th style="text-align: left;">Option A — bare</th>
+<th style="text-align: left;">Option B — namespaced</th>
+<th style="text-align: left;">Option C — declared-first</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>1. OTel metric data model</strong>
+(in-process; option-independent)</td>
+<td style="text-align: left;"><code>Resource{service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>2. SDK Prometheus exporter
+exposition</strong> (curled <code>observer:9464/metrics</code> with the
+collector’s real <code>Accept</code> header; option-independent)</td>
+<td style="text-align: left;"><code># HELP received_samples</code><br><code># TYPE received_samples counter</code><br><code>received_samples{&quot;a.a&quot;=&quot;b&quot;,instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,&quot;service.instance.id&quot;=&quot;my_id1&quot;,&quot;service.name&quot;=&quot;my_service1&quot;} 1</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>3. Collector
+<code>prometheusreceiver</code> → OTLP Resource (App 1)</strong> (debug
+exporter, verbosity <code>detailed</code>)</td>
+<td style="text-align: left;"><code>Resource{service.name=</code><strong><code>&quot;my_service1&quot;</code></strong><code>, service.instance.id=</code><strong><code>&quot;my_id1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;}</code>
+— <strong>no <code>job</code>/<code>instance</code> at all</strong>: the
+declaration overwrote them, not added to them.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>instance=&quot;my_instance1&quot;</code></strong><code>, service.name=</code><strong><code>&quot;my_service1&quot;</code></strong><code>, service.instance.id=</code><strong><code>&quot;my_id1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;}</code>
+— the bare pair survives <em>alongside</em> the still-collided
+<code>service.name</code>/<code>service.instance.id</code>.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, service.name=</code><strong><code>&quot;my_service1&quot;</code></strong><code>, service.instance.id=</code><strong><code>&quot;my_id1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;}</code>
+— same pattern as A, namespaced.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.instance.id=&quot;my_id1&quot;</code></strong><code>,</code><strong><code>service.name=&quot;my_service1&quot;</code></strong><code>}</code>
+— never-derive leaves <code>service.*</code> absent, so this time
+<code>AddTargetInfo</code> fills them in cleanly, no collision.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">— scrape-metadata Resource
+(<code>observer_job</code>, no per-app
+<code>job</code>/<code>instance</code>)</td>
+<td style="text-align: left;"><code>Resource{service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
+<td style="text-align: left;">Identical to the Default Translation
+report’s Option A column</td>
+<td style="text-align: left;">Identical to the Default Translation
+report’s Option B column</td>
+<td style="text-align: left;">Identical to the Default Translation
+report’s Option C column — no <code>service.*</code> at all</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">—
+<code>Metric</code>/<code>DataPoint</code> (App 1, same block, all four
+columns)</td>
+<td style="text-align: left;"><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code>
+— type stays <code>Sum</code>/<code>counter</code>, not
+<code>Gauge</code>/<code>unknown</code> (same root cause as the
+single-app report: <code>observer</code>’s handler never negotiates
+OpenMetrics).<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>4.
+<code>prometheus_remote_write</code> exporter → Prometheus series (App
+1)</strong> (queried Prometheus,
+<code>{path=&quot;remote_write&quot;}</code>)</td>
+<td style="text-align: left;"><code>received_samples_total{job=</code><strong><code>&quot;my_service1&quot;, instance=&quot;my_id1&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=</code><strong><code>&quot;my_service1&quot;, instance=&quot;my_id1&quot;</code></strong><code>, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
+— no <code>service_name</code>/<code>service_instance_id</code> shown,
+consumed as identity rather than duplicated</td>
+<td style="text-align: left;"><code>received_samples_total{job=</code><strong><code>&quot;my_job1&quot;, instance=&quot;my_instance1&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
+— <strong>the bare pair wins, restoring the intended
+identity</strong><br><code>target_info{job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
+— <strong>App 1’s real identity
+(<code>my_service1</code>/<code>my_id1</code>) has vanished
+completely</strong>, not even as metadata<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a></td>
+<td style="text-align: left;"><code>received_samples_total{job=</code><strong><code>&quot;my_job1&quot;, instance=&quot;my_instance1&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
+— same fix as
+A<br><code>target_info{job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
+— same silent loss as A<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a></td>
+<td style="text-align: left;"><code>received_samples_total{job=</code><strong><code>&quot;my_service1&quot;, instance=&quot;my_id1&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
+— <strong>still broken, same as
+Today</strong><br><code>target_info{job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;,</code><strong><code>prometheus_job=&quot;my_job1&quot;, prometheus_instance=&quot;my_instance1&quot;</code></strong><code>, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
+— at least the intended identity survives as metadata this time<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Net effect</strong></td>
+<td style="text-align: left;"><strong>Broken</strong>: App 1 and App 2’s
+series both key on their own
+<code>service.name</code>/<code>service.instance.id</code>, losing the
+<code>job</code>/<code>instance</code> distinction the observer was
+built to assign — same collision as the single-app
+<code>NoTranslation</code> report, recurring per app.</td>
+<td style="text-align: left;"><strong>Series identity fixed</strong>
+(<code>job</code>/<code>instance</code> are
+<code>my_job1</code>/<code>my_instance1</code> again), but each app’s
+real service identity is now lost entirely — not even queryable via
+<code>target_info</code>. A regression relative to Today’s “broken but
+at least the real identity survives.”</td>
+<td style="text-align: left;">Same trade-off as A: series fixed, real
+identity silently dropped.</td>
+<td style="text-align: left;"><strong>Still broken</strong> in the same
+way as Today — Option C’s exporter-side declared-identity check doesn’t
+care that the identity arrived via collision rather than honest
+declaration, it just sees non-empty
+<code>service.name</code>/<code>service.instance.id</code> and defers to
+them. The one improvement over Today: the observer’s intended
+<code>job</code>/<code>instance</code> survive as
+<code>target_info</code> metadata
+(<code>prometheus_job</code>/<code>prometheus_instance</code>), because
+this Resource now counts as “declared.”</td>
+</tr>
+</tbody>
+</table>
+<h2 id="footnotes">Footnotes</h2>
+<aside id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Same collision mechanism as
+<code>verification-notranslation.md</code>’s footnote 2, recurring here
+per observed app: <code>CreateResource</code> first derives
+<code>service.name=&quot;my_job1&quot;</code>/<code>service.instance.id=&quot;my_instance1&quot;</code>
+from App 1’s per-series labels (Today), or additionally stores the
+bare/namespaced pair alongside them (A/B) — the pair itself is untouched
+by what happens next. Then <code>AddTargetInfo</code>
+(<code>receiver/prometheusreceiver/internal/transaction.go</code>,
+unmodified) copies App 1’s own <code>target_info</code> sample onto the
+<em>same</em> Resource verbatim except
+<code>job</code>/<code>instance</code>/<code>__name__</code>. Under
+<code>NoTranslation</code> that sample’s covered attributes arrive
+spelled exactly
+<code>service.name</code>/<code>service.instance.id</code> (dotted — see
+Step 2), which collides with and overwrites whatever
+<code>CreateResource</code> just put there. The bare/namespaced pair,
+stored under different keys entirely, is never touched by this
+collision.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Same collision mechanism as
+<code>verification-notranslation.md</code>’s footnote 2, recurring here
+per observed app: <code>CreateResource</code> first derives
+<code>service.name=&quot;my_job1&quot;</code>/<code>service.instance.id=&quot;my_instance1&quot;</code>
+from App 1’s per-series labels (Today), or additionally stores the
+bare/namespaced pair alongside them (A/B) — the pair itself is untouched
+by what happens next. Then <code>AddTargetInfo</code>
+(<code>receiver/prometheusreceiver/internal/transaction.go</code>,
+unmodified) copies App 1’s own <code>target_info</code> sample onto the
+<em>same</em> Resource verbatim except
+<code>job</code>/<code>instance</code>/<code>__name__</code>. Under
+<code>NoTranslation</code> that sample’s covered attributes arrive
+spelled exactly
+<code>service.name</code>/<code>service.instance.id</code> (dotted — see
+Step 2), which collides with and overwrites whatever
+<code>CreateResource</code> just put there. The bare/namespaced pair,
+stored under different keys entirely, is never touched by this
+collision.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Same collision mechanism as
+<code>verification-notranslation.md</code>’s footnote 2, recurring here
+per observed app: <code>CreateResource</code> first derives
+<code>service.name=&quot;my_job1&quot;</code>/<code>service.instance.id=&quot;my_instance1&quot;</code>
+from App 1’s per-series labels (Today), or additionally stores the
+bare/namespaced pair alongside them (A/B) — the pair itself is untouched
+by what happens next. Then <code>AddTargetInfo</code>
+(<code>receiver/prometheusreceiver/internal/transaction.go</code>,
+unmodified) copies App 1’s own <code>target_info</code> sample onto the
+<em>same</em> Resource verbatim except
+<code>job</code>/<code>instance</code>/<code>__name__</code>. Under
+<code>NoTranslation</code> that sample’s covered attributes arrive
+spelled exactly
+<code>service.name</code>/<code>service.instance.id</code> (dotted — see
+Step 2), which collides with and overwrites whatever
+<code>CreateResource</code> just put there. The bare/namespaced pair,
+stored under different keys entirely, is never touched by this
+collision.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>Option C’s <code>CreateResource</code> never populates
+<code>service.name</code>/<code>service.instance.id</code> in the first
+place (never-derive), so there’s nothing for <code>AddTargetInfo</code>
+to collide with — it just fills in the app’s declared identity cleanly
+onto an otherwise-empty pair of keys. This is the one column, in either
+report, where the receiver-side Resource contains full, uncorrupted app
+identity <em>and</em> the observer’s own pair side by side.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>See <code>verification-notranslation.md</code>’s
+footnote 1 for the root cause (bare
+<code>promhttp.Handler()</code>/<code>HandlerFor</code> never enables
+OpenMetrics) and footnote 3 for why this means the collector’s
+<code>prometheus_remote_write</code> exporter re-adds a
+<code>_total</code> suffix that the design document’s own table doesn’t
+predict for this scenario.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>This is a genuine, observer-specific finding beyond what
+either single-app report showed. <code>identifyingAttrNames</code>
+(<code>pkg/translator/prometheusremotewrite/helper.go</code>) always
+excludes the baseline
+<code>service.namespace</code>/<code>service.name</code>/<code>service.instance.id</code>
+from <code>target_info</code>’s ordinary attributes, and Option A/B
+additionally exclude the bare/namespaced pair (since it’s consumed as
+identity). Here
+<code>service.name</code>/<code>service.instance.id</code> hold App 1’s
+<em>real</em> declared values
+(<code>my_service1</code>/<code>my_id1</code>, per [^1]) — but because
+they’re excluded unconditionally, not read and republished, that
+declaration is discarded rather than demoted to metadata. Contrast with
+the single-app <code>NoTranslation</code> report’s Option A/B columns,
+where the pair and the (uncollided, job-derived)
+<code>service.name</code>/<code>service.instance.id</code> held
+<em>different</em> values and neither one was silently lost — there just
+was no separate “real identity” to lose in that scenario, since the
+single app’s <code>service.name</code> normally <em>is</em> what the
+pair is competing with, not a bystander getting excluded along with
+it.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>This is a genuine, observer-specific finding beyond what
+either single-app report showed. <code>identifyingAttrNames</code>
+(<code>pkg/translator/prometheusremotewrite/helper.go</code>) always
+excludes the baseline
+<code>service.namespace</code>/<code>service.name</code>/<code>service.instance.id</code>
+from <code>target_info</code>’s ordinary attributes, and Option A/B
+additionally exclude the bare/namespaced pair (since it’s consumed as
+identity). Here
+<code>service.name</code>/<code>service.instance.id</code> hold App 1’s
+<em>real</em> declared values
+(<code>my_service1</code>/<code>my_id1</code>, per [^1]) — but because
+they’re excluded unconditionally, not read and republished, that
+declaration is discarded rather than demoted to metadata. Contrast with
+the single-app <code>NoTranslation</code> report’s Option A/B columns,
+where the pair and the (uncollided, job-derived)
+<code>service.name</code>/<code>service.instance.id</code> held
+<em>different</em> values and neither one was silently lost — there just
+was no separate “real identity” to lose in that scenario, since the
+single app’s <code>service.name</code> normally <em>is</em> what the
+pair is competing with, not a bystander getting excluded along with
+it.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>Option C’s exporter-side
+<code>setJobAndInstanceLabels</code> decides “is identity declared?” by
+checking whether
+<code>service.name</code>/<code>service.instance.id</code> are present
+at all — not by checking how they got there. Per [^2], Option C’s
+receiver-side never-derive means these keys hold App 1’s genuinely
+correct, uncollided values
+(<code>my_service1</code>/<code>my_id1</code>) here, same as they do
+under Today (where the check isn’t gated by any option). Either way,
+<code>haveServiceName</code>/<code>haveInstanceID</code> read true, so
+the exporter takes the declared-identity branch and emits
+<code>job=&quot;my_service1&quot;</code>/<code>instance=&quot;my_id1&quot;</code> — the same
+outcome as Today, since both branches derive
+<code>job</code>/<code>instance</code> from
+<code>service.name</code>/<code>service.instance.id</code> identically.
+The difference from Today is only in <code>identifyingAttrNames</code>:
+Option C’s branch excludes the reserved pair from ordinary
+<code>target_info</code> attributes <em>only</em> when the Resource is
+undeclared; since this Resource now counts as declared, the pair stays
+visible as <code>prometheus_job</code>/<code>prometheus_instance</code>,
+giving <code>target_info</code> a way to recover the observer’s intended
+identity that Today’s column doesn’t have.<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</aside>
+</body>
+</html>
