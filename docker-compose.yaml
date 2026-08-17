@@ -1,6 +1,7 @@
 services:
   oteljob:
-    build: .
+    build:
+      context: ./standalone
     stdin_open: true
     command:
       - -no-translation=${OTELJOB_NO_TRANSLATION:-false}
