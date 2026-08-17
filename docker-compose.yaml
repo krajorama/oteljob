@@ -6,7 +6,8 @@ services:
       - otelnet
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.158.0
+    build:
+      context: ./otelcollector
     depends_on:
       - oteljob
       - prometheus
