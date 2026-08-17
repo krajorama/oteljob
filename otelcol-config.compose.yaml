@@ -6,6 +6,11 @@ receivers:
           scrape_interval: 5s
           static_configs:
             - targets: ['oteljob:9464']
+        - job_name: 'observer_job'
+          scrape_interval: 5s
+          honor_labels: true
+          static_configs:
+            - targets: ['observer:9464']
 
 exporters:
   debug:

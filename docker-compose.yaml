@@ -1,5 +1,6 @@
 services:
   oteljob:
+    profiles: ["standalone"]
     build:
       context: ./standalone
     stdin_open: true
@@ -8,11 +9,20 @@ services:
     networks:
       - otelnet
 
+  observer:
+    profiles: ["observer"]
+    build:
+      context: ./observer
+    command:
+      - -no-translation=${OBSERVER_NO_TRANSLATION:-false}
+    networks:
+      - otelnet
+
   otel-collector:
+    profiles: ["standalone", "observer"]
     build:
       context: ./otelcollector
     depends_on:
-      - oteljob
       - prometheus
     volumes:
       - ./otelcol-config.compose.yaml:/etc/otelcol-contrib/config.yaml:ro
@@ -23,6 +33,7 @@ services:
       - otelnet
 
   prometheus:
+    profiles: ["standalone", "observer"]
     build:
       context: ./prometheus
     ports:

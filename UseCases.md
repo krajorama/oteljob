@@ -30,5 +30,5 @@ DataPoint{attributes={"a.a":"b"}, value=2}
 
 In this case the exporter must add job, instance labels to series exposed about the application:
 
-All series (foo and target_info) generated for App 1 must have job="my_job1" and instance="my_instance1" labels.
-All series (foo and target_info) generated for App 2 must have job="my_job2" and instance="my_instance2" labels.
+All series (foo and target_info) generated for App 1 must have job="my_service1" and instance="my_id1" labels.
+All series (foo and target_info) generated for App 2 must have job="my_service2" and instance="my_id2" labels.
