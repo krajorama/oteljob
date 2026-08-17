@@ -2,6 +2,8 @@ services:
   oteljob:
     build: .
     stdin_open: true
+    command:
+      - -no-translation=${OTELJOB_NO_TRANSLATION:-false}
     networks:
       - otelnet
 
@@ -13,6 +15,9 @@ services:
       - prometheus
     volumes:
       - ./otelcol-config.compose.yaml:/etc/otelcol-contrib/config.yaml:ro
+    command:
+      - --config=/etc/otelcol-contrib/config.yaml
+      - --feature-gates=${OTELCOL_FEATURE_GATES:-}
     networks:
       - otelnet
 
