@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Verification: One Counter, Default Translation Strategy</title>
+  <style>
+html {
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+background-color: #1a1a1a;
+border: none;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+  <style>
+:root { color-scheme: light dark; }
+html, body { margin: 0; padding: 0; }
+body {
+max-width: 100%;
+padding: 1.5rem 2rem 4rem;
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+line-height: 1.5;
+}
+h1 { font-size: 1.6rem; border-bottom: 2px solid currentColor; padding-bottom: 0.4rem; }
+h2 { font-size: 1.25rem; margin-top: 2rem; }
+code {
+font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+font-size: 0.85em;
+background: rgba(127,127,127,0.15);
+padding: 0.1em 0.3em;
+border-radius: 3px;
+}
+table {
+width: 100%;
+border-collapse: collapse;
+table-layout: fixed;
+margin: 1.5rem 0;
+font-size: 0.85rem;
+}
+th, td {
+border: 1px solid rgba(127,127,127,0.4);
+padding: 0.6rem 0.7rem;
+text-align: left;
+vertical-align: top;
+word-wrap: break-word;
+overflow-wrap: anywhere;
+}
+th {
+background: rgba(127,127,127,0.15);
+font-size: 0.9rem;
+}
+
+th:first-child, td:first-child { width: 12%; }
+tr td code, tr td strong code { white-space: pre-wrap; }
+section[role="doc-endnotes"] {
+margin-top: 3rem;
+padding-top: 1rem;
+border-top: 1px solid rgba(127,127,127,0.4);
+font-size: 0.85rem;
+}
+section[role="doc-endnotes"] ol { padding-left: 1.2rem; }
+section[role="doc-endnotes"] li { margin-bottom: 0.8rem; }
+a { color: #3b82f6; }
+strong { color: inherit; }
+td strong, th strong { background: rgba(255, 200, 0, 0.25); padding: 0 0.15em; border-radius: 2px; }
+</style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Verification: One Counter, Default Translation
+Strategy</h1>
+</header>
+<h1 id="verification-one-counter-default-translation-strategy">Verification:
+One Counter, Default Translation Strategy</h1>
+<p>Re-verifies <a href="../../open-telemetry/opentelemetry-go/Preserving%20Prometheus%20Job%20and%20Instance%20in%20OTLP%20Translation.md#end-to-end-comparison-one-counter-default-translation-strategy">“End-to-End
+Comparison: One Counter, Default Translation Strategy”</a> against a
+real running system, all four columns, using the custom
+<code>otelcol-custom</code> collector built from the <a href="https://github.com/krajorama/opentelemetry-collector-contrib/tree/krajo/job-instance-persistence"><code>krajorama/opentelemetry-collector-contrib</code>
+branch <code>krajo/job-instance-persistence</code></a> (see <a href="otelcollector/">otelcollector/</a>). That branch implements
+Options A/B/C as three mutually-exclusive alpha feature gates, off by
+default:</p>
+<ul>
+<li>Receiver:
+<code>receiver.prometheusreceiver.jobInstanceOption{A,B,C}</code></li>
+<li>Exporter:
+<code>exporter.prometheusremotewrite.jobInstanceOption{A,B,C}</code></li>
+</ul>
+<p><strong>Setup</strong>: <code>oteljob</code> app — resource
+<code>service.name=&quot;my_service&quot;</code>,
+<code>service.instance.id=&quot;my_id&quot;</code>; meter <code>foo</code>;
+<code>Float64Counter(&quot;received_samples&quot;)</code> with attribute
+<code>a.a=&quot;b&quot;</code>; default SDK translation strategy (no
+<code>--no-translation</code>). Scraped by the collector as
+<code>job_name=&quot;my_job&quot;</code>, target <code>oteljob:9464</code>. Egress
+via the collector’s <code>prometheus_remote_write</code> exporter
+(native PRW translator — the code path this branch modifies) to the
+custom-built Prometheus (<code>prometheus/</code>, branch
+<code>krajo/debug-otlp-rw-endpoint</code>). All four variants were
+actually run in the compose stack
+(<code>OTELCOL_FEATURE_GATES=&lt;gate names&gt; docker compose up -d otel-collector</code>);
+nothing here is inferred from source alone.</p>
+<h2 id="results">Results</h2>
+<table>
+<colgroup>
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Step</th>
+<th style="text-align: left;">Today (no gates)</th>
+<th style="text-align: left;">Option A — bare</th>
+<th style="text-align: left;">Option B — namespaced</th>
+<th style="text-align: left;">Option C — declared-first</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><strong>1. OTel metric data model</strong>
+(in-process, SDK)</td>
+<td style="text-align: left;"><code>Resource{service.name=&quot;my_service&quot;, service.instance.id=&quot;my_id&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>2. SDK Prometheus exporter
+exposition</strong> (curled <code>oteljob:9464/metrics</code> directly,
+bypassing the collector)</td>
+<td style="text-align: left;"><code># HELP received_samples_total</code><br><code># TYPE received_samples_total counter</code><br><code>received_samples_total{a_a=&quot;b&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{service_instance_id=&quot;my_id&quot;,service_name=&quot;my_service&quot;,telemetry_sdk_language=&quot;go&quot;,telemetry_sdk_name=&quot;opentelemetry&quot;,telemetry_sdk_version=&quot;1.45.0&quot;} 1</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>3. Collector
+<code>prometheusreceiver</code> → OTLP Resource</strong> (debug
+exporter, verbosity <code>detailed</code>)</td>
+<td style="text-align: left;"><code>Resource{service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
+— <strong><code>service.name</code> and <code>service.instance.id</code>
+are absent</strong> (present in all three other columns).<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">—
+<code>Metric</code>/<code>DataPoint</code> (same block, all four
+columns)</td>
+<td style="text-align: left;"><code>Metric{name=&quot;received_samples_total&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a_a&quot;:&quot;b&quot;}, value=1}</code></td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Today</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>4.
+<code>prometheus_remote_write</code> exporter → Prometheus
+series</strong> (queried Prometheus,
+<code>{path=&quot;remote_write&quot;}</code>)</td>
+<td style="text-align: left;"><code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code></td>
+<td style="text-align: left;"><strong>Byte-identical to Today</strong>
+on both series.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Today</strong>
+on both series.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Today</strong>
+on both series.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><strong>Net effect</strong></td>
+<td style="text-align: left;">Scrape identity
+(<code>job</code>/<code>instance</code>) wins on every series; the app’s
+declared identity survives only as <code>target_info</code>
+metadata.</td>
+<td style="text-align: left;">The OTLP Resource carries an explicit
+<strong>bare <code>job</code>/<code>instance</code> pair</strong> in
+addition to the legacy fields, but the Prometheus series are
+<code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
+and
+<code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
+— the pair is not visible on the wire.</td>
+<td style="text-align: left;">The OTLP Resource carries an explicit
+<strong>namespaced
+<code>prometheus.job</code>/<code>prometheus.instance</code>
+pair</strong> in addition to the legacy fields, but the Prometheus
+series are
+<code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
+and
+<code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
+— the pair is not visible on the wire.</td>
+<td style="text-align: left;"><strong>Does not behave as
+“declared-first” in this use case</strong> (see note <a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>):
+the Prometheus series are
+<code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
+and
+<code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
+— the app’s declared
+<code>service.name=&quot;my_service&quot;</code>/<code>service.instance.id=&quot;my_id&quot;</code>
+never becomes <code>job</code>/<code>instance</code> on the series.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="footnotes">Footnotes</h2>
+<aside id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Option C’s receiver (<code>CreateResource</code> in
+<code>prom_to_otlp.go</code>) is a genuine “never-derive”: it sets
+<em>only</em>
+<code>prometheus.job</code>/<code>prometheus.instance</code> and leaves
+<code>service.name</code>/<code>service.instance.id</code> unset. The
+<code>service_name</code>/<code>service_instance_id</code> (underscored)
+attributes seen in the captured Resource come from the <em>existing,
+unmodified</em> <code>target_info</code>-handling code elsewhere in the
+receiver, which copies every
+non-<code>job</code>/<code>instance</code>/<code>__name__</code> label
+from the scraped <code>target_info</code> sample onto the Resource
+verbatim — this branch doesn’t touch that code path at all.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>For both Option A and B, the exporter
+(<code>setJobAndInstanceFromPair</code> in
+<code>pkg/translator/prometheusremotewrite/helper.go</code>) uses the
+bare/namespaced pair verbatim when present, falling back per-field to
+the legacy <code>service.name</code>/<code>service.instance.id</code>
+derivation otherwise. In this use case the receiver sets the pair and
+the legacy fields to the <em>same</em> values
+(<code>my_job</code>/<code>oteljob:9464</code>), so the chosen source is
+invisible in the output — the doc’s own prediction of “byte-identical to
+Today” holds exactly.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>For both Option A and B, the exporter
+(<code>setJobAndInstanceFromPair</code> in
+<code>pkg/translator/prometheusremotewrite/helper.go</code>) uses the
+bare/namespaced pair verbatim when present, falling back per-field to
+the legacy <code>service.name</code>/<code>service.instance.id</code>
+derivation otherwise. In this use case the receiver sets the pair and
+the legacy fields to the <em>same</em> values
+(<code>my_job</code>/<code>oteljob:9464</code>), so the chosen source is
+invisible in the output — the doc’s own prediction of “byte-identical to
+Today” holds exactly.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>This is the one place actual behavior diverges from what
+the source document’s table would suggest, and the reason
+<code>AGENTS.md</code> requires running each column rather than
+reasoning from the diff alone. Option C’s exporter-side logic
+(<code>setJobAndInstanceLabels</code>, Option C branch) decides “is
+identity declared?” by checking for the literal dotted resource keys
+<code>service.name</code> / <code>service.instance.id</code>. But under
+the <strong>default</strong> SDK translation strategy, those keys never
+reach the collector under that spelling at all — the SDK escapes them to
+<code>service_name</code>/<code>service_instance_id</code>
+<em>before</em> the scrape happens (see Step 2), and Option C’s receiver
+additionally never populates the dotted keys from job/instance (see
+[^1]). So <code>haveServiceName</code>/<code>haveInstanceID</code> are
+both false, the “declared identity” branch never fires, and the exporter
+falls through to the
+<code>prometheus.job</code>/<code>prometheus.instance</code> fallback
+pair — which numerically equals the scrape’s
+<code>job</code>/<code>instance</code> here, making the final series
+indistinguishable from Today, A, and B. The doc’s own note (d), about
+Option C’s mapping being “keyed on the negotiated escaping, not on the
+producer’s translation strategy,” describes a version of this exact gap
+for a fuller proposed implementation with escaping-aware Covered Label
+Mapping; this POC is simpler still — it has no escaping-awareness on
+either side, so the mismatch is unconditional under the default
+strategy, not merely escaping-dependent. Declared-first behavior would
+only be observable in this POC if the app’s Resource happened to expose
+literal dotted
+<code>service.name</code>/<code>service.instance.id</code> keys to the
+receiver, which does not happen under the default translation strategy
+(see the separate <code>NoTranslation</code> scenario instead).<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>This is the one place actual behavior diverges from what
+the source document’s table would suggest, and the reason
+<code>AGENTS.md</code> requires running each column rather than
+reasoning from the diff alone. Option C’s exporter-side logic
+(<code>setJobAndInstanceLabels</code>, Option C branch) decides “is
+identity declared?” by checking for the literal dotted resource keys
+<code>service.name</code> / <code>service.instance.id</code>. But under
+the <strong>default</strong> SDK translation strategy, those keys never
+reach the collector under that spelling at all — the SDK escapes them to
+<code>service_name</code>/<code>service_instance_id</code>
+<em>before</em> the scrape happens (see Step 2), and Option C’s receiver
+additionally never populates the dotted keys from job/instance (see
+[^1]). So <code>haveServiceName</code>/<code>haveInstanceID</code> are
+both false, the “declared identity” branch never fires, and the exporter
+falls through to the
+<code>prometheus.job</code>/<code>prometheus.instance</code> fallback
+pair — which numerically equals the scrape’s
+<code>job</code>/<code>instance</code> here, making the final series
+indistinguishable from Today, A, and B. The doc’s own note (d), about
+Option C’s mapping being “keyed on the negotiated escaping, not on the
+producer’s translation strategy,” describes a version of this exact gap
+for a fuller proposed implementation with escaping-aware Covered Label
+Mapping; this POC is simpler still — it has no escaping-awareness on
+either side, so the mismatch is unconditional under the default
+strategy, not merely escaping-dependent. Declared-first behavior would
+only be observable in this POC if the app’s Resource happened to expose
+literal dotted
+<code>service.name</code>/<code>service.instance.id</code> keys to the
+receiver, which does not happen under the default translation strategy
+(see the separate <code>NoTranslation</code> scenario instead).<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</aside>
+</body>
+</html>
