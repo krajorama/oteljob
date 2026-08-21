@@ -225,86 +225,104 @@ Strategy</h1>
 One Counter, Default Translation Strategy</h1>
 <p>Re-verifies <a href="../../open-telemetry/opentelemetry-go/Preserving%20Prometheus%20Job%20and%20Instance%20in%20OTLP%20Translation.md#end-to-end-comparison-one-counter-default-translation-strategy">“End-to-End
 Comparison: One Counter, Default Translation Strategy”</a> against a
-real running system, all four columns, using the custom
-<code>otelcol-custom</code> collector built from the <a href="https://github.com/krajorama/opentelemetry-collector-contrib/tree/krajo/job-instance-persistence"><code>krajorama/opentelemetry-collector-contrib</code>
-branch <code>krajo/job-instance-persistence</code></a> (see <a href="otelcollector/">otelcollector/</a>). That branch implements
-Options A/B/C as three mutually-exclusive alpha feature gates, off by
+real running system, using the custom <code>otelcol-custom</code>
+collector built from the <a href="https://github.com/krajorama/opentelemetry-collector-contrib/tree/krajo/job-instance-persistence"><code>krajorama/opentelemetry-collector-contrib</code>
+branch <code>krajo/job-instance-persistence</code></a> (see <a href="otelcollector/">otelcollector/</a>), rebuilt against commit
+<code>78a1b6d</code> (“Add POC option C1”). That branch implements
+Options A/B/C/C1 as four mutually-exclusive alpha feature gates, off by
 default:</p>
 <ul>
 <li>Receiver:
-<code>receiver.prometheusreceiver.jobInstanceOption{A,B,C}</code></li>
+<code>receiver.prometheusreceiver.jobInstanceOption{A,B,C,C1}</code></li>
 <li>Exporter:
-<code>exporter.prometheusremotewrite.jobInstanceOption{A,B,C}</code></li>
+<code>exporter.prometheusremotewrite.jobInstanceOption{A,B,C,C1}</code></li>
 </ul>
+<p>Only <strong>B, C, and C1</strong> are shown below — Option A is
+omitted (four columns made the tables too wide, and its bare
+<code>job</code>/<code>instance</code> resource attributes aren’t a
+shape that makes sense in the OTel data model to begin with), and so is
+“Today” (no gates), since B/C/C1 already show the no-gates baseline
+implicitly wherever a column doesn’t diverge from it. Option A’s own
+results are unaffected by this update and remain available in git
+history.</p>
+<p><strong>Option C1 is new</strong>: as of commit <code>78a1b6d</code>,
+Option C’s receiver-side (<code>AddTargetInfo</code>) gained
+“covered-name recognition” — it now recognizes
+<code>target_info</code>’s flattened
+<code>service_name</code>/<code>service_namespace</code>/<code>service_instance_id</code>
+labels as declaring the same identity as their dotted spelling, not just
+the literal dotted form. Option C1 is Option C <em>without</em> that
+recognition — i.e., exactly the old Option C behavior this report
+previously documented. The two share identical exporter-side (OTLP →
+Prometheus) logic; they differ only in what the receiver populates.</p>
 <p><strong>Setup</strong>: <code>oteljob</code> app — resource
 <code>service.name=&quot;my_service&quot;</code>,
 <code>service.instance.id=&quot;my_id&quot;</code>; meter <code>foo</code>;
 <code>Float64Counter(&quot;received_samples&quot;)</code> with attribute
 <code>a.a=&quot;b&quot;</code>; default SDK translation strategy (no
-<code>--no-translation</code>). Scraped by the collector as
+<code>-no-translation</code>). Scraped by the collector as
 <code>job_name=&quot;my_job&quot;</code>, target <code>oteljob:9464</code>. Egress
-via the collector’s <code>prometheus_remote_write</code> exporter
-(native PRW translator — the code path this branch modifies) to the
+via the collector’s <code>prometheus_remote_write</code> exporter to the
 custom-built Prometheus (<code>prometheus/</code>, branch
-<code>krajo/debug-otlp-rw-endpoint</code>). All four variants were
+<code>krajo/debug-otlp-rw-endpoint</code>). All three columns were
 actually run in the compose stack
-(<code>OTELCOL_FEATURE_GATES=&lt;gate names&gt; docker compose up -d otel-collector</code>);
-nothing here is inferred from source alone.</p>
+(<code>OTELCOL_FEATURE_GATES=&lt;gate names&gt; docker compose --profile standalone up -d --force-recreate oteljob otel-collector prometheus</code>),
+with Prometheus’s storage wiped between captures; nothing here is
+inferred from source alone.</p>
 <h2 id="results">Results</h2>
 <table>
 <colgroup>
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Step</th>
-<th style="text-align: left;">Today (no gates)</th>
-<th style="text-align: left;">Option A — bare</th>
 <th style="text-align: left;">Option B — namespaced</th>
 <th style="text-align: left;">Option C — declared-first</th>
+<th style="text-align: left;">Option C1 — declared-first, no
+covered-name recognition</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;"><strong>1. OTel metric data model</strong>
-(in-process, SDK)</td>
+(in-process, SDK; option-independent)</td>
 <td style="text-align: left;"><code>Resource{service.name=&quot;my_service&quot;, service.instance.id=&quot;my_id&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>2. SDK Prometheus exporter
-exposition</strong> (curled <code>oteljob:9464/metrics</code> directly,
-bypassing the collector)</td>
+exposition</strong> (curled <code>oteljob:9464/metrics</code> directly;
+option-independent)</td>
 <td style="text-align: left;"><code># HELP received_samples_total</code><br><code># TYPE received_samples_total counter</code><br><code>received_samples_total{a_a=&quot;b&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{service_instance_id=&quot;my_id&quot;,service_name=&quot;my_service&quot;,telemetry_sdk_language=&quot;go&quot;,telemetry_sdk_name=&quot;opentelemetry&quot;,telemetry_sdk_version=&quot;1.45.0&quot;} 1</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>3. Collector
 <code>prometheusreceiver</code> → OTLP Resource</strong> (debug
 exporter, verbosity <code>detailed</code>)</td>
-<td style="text-align: left;"><code>Resource{service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
-— <strong><code>service.name</code> and <code>service.instance.id</code>
-are absent</strong> (present in all three other columns).<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{prometheus.job=&quot;my_job&quot;, prometheus.instance=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.name=&quot;my_service&quot;</code></strong><code>,</code><strong><code>service.instance.id=&quot;my_id&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
+— <strong><code>service.name</code>/<code>service.instance.id</code> are
+populated from the flattened <code>target_info</code> labels</strong>,
+and there are no separate
+<code>service_name</code>/<code>service_instance_id</code> duplicates.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+<td style="text-align: left;"><code>Resource{prometheus.job=&quot;my_job&quot;, prometheus.instance=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
+— same shape as Option B minus the job-derived
+<code>service.name</code>/<code>service.instance.id</code>.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">—
-<code>Metric</code>/<code>DataPoint</code> (same block, all four
+<code>Metric</code>/<code>DataPoint</code> (same block, all three
 columns)</td>
 <td style="text-align: left;"><code>Metric{name=&quot;received_samples_total&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a_a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>4.
@@ -312,12 +330,12 @@ columns)</td>
 series</strong> (queried Prometheus,
 <code>{path=&quot;remote_write&quot;}</code>)</td>
 <td style="text-align: left;"><code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code></td>
-<td style="text-align: left;"><strong>Byte-identical to Today</strong>
-on both series.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
-<td style="text-align: left;"><strong>Byte-identical to Today</strong>
-on both series.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
-<td style="text-align: left;"><strong>Byte-identical to Today</strong>
-on both series.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
+<td style="text-align: left;"><code>received_samples_total{</code><strong><code>job=&quot;my_service&quot;, instance=&quot;my_id&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{</code><strong><code>job=&quot;my_service&quot;, instance=&quot;my_id&quot;</code></strong><code>,</code><strong><code>prometheus_job=&quot;my_job&quot;, prometheus_instance=&quot;oteljob:9464&quot;</code></strong><code>, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
+— <strong>the app’s own declared identity now wins</strong>, and the
+scrape pair survives as ordinary <code>target_info</code> metadata.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B</strong> on both series — this is exactly what the report previously
+called “Option C.”<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Net effect</strong></td>
@@ -325,31 +343,19 @@ on both series.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref
 (<code>job</code>/<code>instance</code>) wins on every series; the app’s
 declared identity survives only as <code>target_info</code>
 metadata.</td>
-<td style="text-align: left;">The OTLP Resource carries an explicit
-<strong>bare <code>job</code>/<code>instance</code> pair</strong> in
-addition to the legacy fields, but the Prometheus series are
-<code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
-and
-<code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
-— the pair is not visible on the wire.</td>
-<td style="text-align: left;">The OTLP Resource carries an explicit
-<strong>namespaced
-<code>prometheus.job</code>/<code>prometheus.instance</code>
-pair</strong> in addition to the legacy fields, but the Prometheus
-series are
-<code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
-and
-<code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
-— the pair is not visible on the wire.</td>
-<td style="text-align: left;"><strong>Does not behave as
-“declared-first” in this use case</strong> (see note <a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>):
-the Prometheus series are
-<code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code>
-and
-<code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
-— the app’s declared
-<code>service.name=&quot;my_service&quot;</code>/<code>service.instance.id=&quot;my_id&quot;</code>
-never becomes <code>job</code>/<code>instance</code> on the series.</td>
+<td style="text-align: left;"><strong>This is the first configuration in
+this whole set of reports that achieves true declared-first behavior
+under the default translation strategy.</strong>
+<code>received_samples_total</code> is keyed by the app’s own
+<code>service.name</code>/<code>service.instance.id</code>, and the
+scrape’s <code>job</code>/<code>instance</code> are demoted to queryable
+<code>target_info</code> metadata — the reverse of every other
+column.</td>
+<td style="text-align: left;">Reproduces the gap the original report
+flagged: the declared-identity check never fires because
+<code>service.name</code>/<code>service.instance.id</code> never arrive
+under that spelling, so the output is indistinguishable from Option
+B.</td>
 </tr>
 </tbody>
 </table>
@@ -357,98 +363,65 @@ never becomes <code>job</code>/<code>instance</code> on the series.</td>
 <aside id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1"><p>Option C’s receiver (<code>CreateResource</code> in
-<code>prom_to_otlp.go</code>) is a genuine “never-derive”: it sets
-<em>only</em>
-<code>prometheus.job</code>/<code>prometheus.instance</code> and leaves
-<code>service.name</code>/<code>service.instance.id</code> unset. The
-<code>service_name</code>/<code>service_instance_id</code> (underscored)
-attributes seen in the captured Resource come from the <em>existing,
-unmodified</em> <code>target_info</code>-handling code elsewhere in the
-receiver, which copies every
-non-<code>job</code>/<code>instance</code>/<code>__name__</code> label
-from the scraped <code>target_info</code> sample onto the Resource
-verbatim — this branch doesn’t touch that code path at all.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>For both Option A and B, the exporter
-(<code>setJobAndInstanceFromPair</code> in
-<code>pkg/translator/prometheusremotewrite/helper.go</code>) uses the
-bare/namespaced pair verbatim when present, falling back per-field to
-the legacy <code>service.name</code>/<code>service.instance.id</code>
-derivation otherwise. In this use case the receiver sets the pair and
-the legacy fields to the <em>same</em> values
-(<code>my_job</code>/<code>oteljob:9464</code>), so the chosen source is
-invisible in the output — the doc’s own prediction of “byte-identical to
-Today” holds exactly.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>For both Option A and B, the exporter
-(<code>setJobAndInstanceFromPair</code> in
-<code>pkg/translator/prometheusremotewrite/helper.go</code>) uses the
-bare/namespaced pair verbatim when present, falling back per-field to
-the legacy <code>service.name</code>/<code>service.instance.id</code>
-derivation otherwise. In this use case the receiver sets the pair and
-the legacy fields to the <em>same</em> values
-(<code>my_job</code>/<code>oteljob:9464</code>), so the chosen source is
-invisible in the output — the doc’s own prediction of “byte-identical to
-Today” holds exactly.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4"><p>This is the one place actual behavior diverges from what
-the source document’s table would suggest, and the reason
-<code>AGENTS.md</code> requires running each column rather than
-reasoning from the diff alone. Option C’s exporter-side logic
-(<code>setJobAndInstanceLabels</code>, Option C branch) decides “is
-identity declared?” by checking for the literal dotted resource keys
-<code>service.name</code> / <code>service.instance.id</code>. But under
-the <strong>default</strong> SDK translation strategy, those keys never
-reach the collector under that spelling at all — the SDK escapes them to
-<code>service_name</code>/<code>service_instance_id</code>
-<em>before</em> the scrape happens (see Step 2), and Option C’s receiver
-additionally never populates the dotted keys from job/instance (see
-[^1]). So <code>haveServiceName</code>/<code>haveInstanceID</code> are
-both false, the “declared identity” branch never fires, and the exporter
-falls through to the
-<code>prometheus.job</code>/<code>prometheus.instance</code> fallback
-pair — which numerically equals the scrape’s
-<code>job</code>/<code>instance</code> here, making the final series
-indistinguishable from Today, A, and B. The doc’s own note (d), about
-Option C’s mapping being “keyed on the negotiated escaping, not on the
-producer’s translation strategy,” describes a version of this exact gap
-for a fuller proposed implementation with escaping-aware Covered Label
-Mapping; this POC is simpler still — it has no escaping-awareness on
-either side, so the mismatch is unconditional under the default
-strategy, not merely escaping-dependent. Declared-first behavior would
-only be observable in this POC if the app’s Resource happened to expose
-literal dotted
-<code>service.name</code>/<code>service.instance.id</code> keys to the
-receiver, which does not happen under the default translation strategy
-(see the separate <code>NoTranslation</code> scenario instead).<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5"><p>This is the one place actual behavior diverges from what
-the source document’s table would suggest, and the reason
-<code>AGENTS.md</code> requires running each column rather than
-reasoning from the diff alone. Option C’s exporter-side logic
-(<code>setJobAndInstanceLabels</code>, Option C branch) decides “is
-identity declared?” by checking for the literal dotted resource keys
-<code>service.name</code> / <code>service.instance.id</code>. But under
-the <strong>default</strong> SDK translation strategy, those keys never
-reach the collector under that spelling at all — the SDK escapes them to
-<code>service_name</code>/<code>service_instance_id</code>
-<em>before</em> the scrape happens (see Step 2), and Option C’s receiver
-additionally never populates the dotted keys from job/instance (see
-[^1]). So <code>haveServiceName</code>/<code>haveInstanceID</code> are
-both false, the “declared identity” branch never fires, and the exporter
-falls through to the
-<code>prometheus.job</code>/<code>prometheus.instance</code> fallback
-pair — which numerically equals the scrape’s
-<code>job</code>/<code>instance</code> here, making the final series
-indistinguishable from Today, A, and B. The doc’s own note (d), about
-Option C’s mapping being “keyed on the negotiated escaping, not on the
-producer’s translation strategy,” describes a version of this exact gap
-for a fuller proposed implementation with escaping-aware Covered Label
-Mapping; this POC is simpler still — it has no escaping-awareness on
-either side, so the mismatch is unconditional under the default
-strategy, not merely escaping-dependent. Declared-first behavior would
-only be observable in this POC if the app’s Resource happened to expose
-literal dotted
-<code>service.name</code>/<code>service.instance.id</code> keys to the
-receiver, which does not happen under the default translation strategy
-(see the separate <code>NoTranslation</code> scenario instead).<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>Both C and C1 share the same receiver-side
+“never-derive”: <code>CreateResource</code>
+(<code>prom_to_otlp.go</code>) sets <em>only</em>
+<code>prometheus.job</code>/<code>prometheus.instance</code> from the
+scrape and leaves
+<code>service.name</code>/<code>service.instance.id</code> unset,
+regardless of which gate is on. The two options diverge only in
+<code>AddTargetInfo</code> (<code>transaction.go</code>): C1 copies
+every <code>target_info</code> label verbatim (the original, unmodified
+behavior), so the app’s declaration lands under whatever spelling it was
+exposed with — here, flattened
+<code>service_name</code>/<code>service_instance_id</code>, since the
+SDK’s default translation strategy escapes the dots before the scrape
+ever happens. C instead runs
+<code>addTargetInfoWithCoveredNameRecognition</code>, which recognizes
+<code>service_name</code>/<code>service_namespace</code>/<code>service_instance_id</code>
+as aliases of the dotted
+<code>service.name</code>/<code>service.namespace</code>/<code>service.instance.id</code>
+and writes the canonical dotted key (collapsing agreeing spellings,
+dropping disagreeing ones rather than guessing) — so the same input that
+leaves C1’s Resource with flattened keys leaves C’s Resource with dotted
+ones.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Both C and C1 share the same receiver-side
+“never-derive”: <code>CreateResource</code>
+(<code>prom_to_otlp.go</code>) sets <em>only</em>
+<code>prometheus.job</code>/<code>prometheus.instance</code> from the
+scrape and leaves
+<code>service.name</code>/<code>service.instance.id</code> unset,
+regardless of which gate is on. The two options diverge only in
+<code>AddTargetInfo</code> (<code>transaction.go</code>): C1 copies
+every <code>target_info</code> label verbatim (the original, unmodified
+behavior), so the app’s declaration lands under whatever spelling it was
+exposed with — here, flattened
+<code>service_name</code>/<code>service_instance_id</code>, since the
+SDK’s default translation strategy escapes the dots before the scrape
+ever happens. C instead runs
+<code>addTargetInfoWithCoveredNameRecognition</code>, which recognizes
+<code>service_name</code>/<code>service_namespace</code>/<code>service_instance_id</code>
+as aliases of the dotted
+<code>service.name</code>/<code>service.namespace</code>/<code>service.instance.id</code>
+and writes the canonical dotted key (collapsing agreeing spellings,
+dropping disagreeing ones rather than guessing) — so the same input that
+leaves C1’s Resource with flattened keys leaves C’s Resource with dotted
+ones.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>The exporter-side logic is <em>unchanged</em> from what
+previously ran as “Option C”: <code>setJobAndInstanceLabels</code>’s
+declared-identity branch simply checks whether
+<code>service.name</code>/<code>service.instance.id</code> (dotted) are
+present on the Resource, and derives
+<code>job</code>/<code>instance</code> from them if so. What changed is
+that the receiver now actually populates those dotted keys under the
+default translation strategy (see [^1]), so this check — which always
+existed — finally has something to find.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>This column is exactly what commit
+<code>78a1b6d</code>’s message describes: Option C’s old behavior,
+preserved as its own gate. Compare directly against the original report
+content (still in git history) for Option C before this commit — the
+results are identical, because C1 <em>is</em> that old behavior,
+unchanged.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </aside>
 </body>

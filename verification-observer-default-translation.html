@@ -227,10 +227,11 @@ Observer Use Case, Default Translation Strategy</h1>
 process (<a href="observer/main.go">observer/main.go</a>) reporting
 metrics about two other applications it observes, each with its own
 <code>job</code>/<code>instance</code> identity — under the SDK’s
-<strong>default</strong> translation strategy, across all four collector
-options: Today (no gates), and the
-<code>krajo/job-instance-persistence</code> fork’s Options A/B/C.
-Companion to <a href="verification-observer-notranslation.md">verification-observer-notranslation.md</a>
+<strong>default</strong> translation strategy, using the
+<code>krajo/job-instance-persistence</code> fork’s Options B, C, and C1
+(rebuilt against commit <code>78a1b6d</code>, “Add POC option C1”; see
+<a href="verification-default-translation.md">verification-default-translation.md</a>
+for why “Today”/Option A are omitted and what C1 is). Companion to <a href="verification-observer-notranslation.md">verification-observer-notranslation.md</a>
 and the two single-app reports.</p>
 <p><strong>Implementation</strong>: two
 <code>sdkmetric.MeterProvider</code>s share one
@@ -249,135 +250,126 @@ constructed with <code>WithRegisterer(sharedRegistry)</code> and
 attribute <code>a.a=&quot;b&quot;</code>. Scraped by the collector as
 <code>job_name=&quot;observer_job&quot;</code>, target <code>observer:9464</code>,
 <strong><code>honor_labels: true</code></strong>. Egress via
-<code>prometheus_remote_write</code>. Each of the four columns was
-actually run
+<code>prometheus_remote_write</code>. Each column was actually run
 (<code>OTELCOL_FEATURE_GATES=&lt;gates&gt; docker compose --profile observer up -d --force-recreate observer otel-collector prometheus</code>),
 with Prometheus’s storage wiped between captures.</p>
 <p><strong>Methodology note</strong>:
 <code>otelcol-config.compose.yaml</code> keeps <em>both</em> scrape jobs
-(<code>my_job</code> → <code>oteljob:9464</code>,
-<code>observer_job</code> → <code>observer:9464</code>) configured
-regardless of active profile. Under the <code>observer</code> profile
-<code>oteljob</code> doesn’t exist, so <code>my_job</code> fails every
-cycle — but the failed target still gets a real (not stale)
-<code>up=0</code> data point, Resource, and synthesized
-<code>target_info</code>, for the same reason documented in <a href="verification-observer-notranslation.md">verification-observer.md</a>’s
-predecessor: <code>addResourceTargetInfo</code> unconditionally
-synthesizes <code>target_info</code> from any Resource with a data
-point. It’s excluded from the tables below since it isn’t part of this
-use case. Because <code>CreateResource</code> runs once per unique
-<code>(job, instance)</code> pair found in the scrape (not once per
-scrape target — <code>honor_labels</code> preserves each app’s own
-labels), the collector’s per-app Options A/B/C behavior applies
-independently to App 1’s Resource, App 2’s Resource, <em>and</em> the
-scrape-metadata Resource
-(<code>observer_job</code>/<code>observer:9464</code>, which carries
-only <code>up</code>/<code>scrape_*</code> metrics that have no per-app
+configured regardless of active profile; the inactive
+<code>my_job</code>/<code>oteljob:9464</code> target’s benign
+<code>up=0</code> + synthesized <code>target_info</code> is excluded
+from the tables below (see the single-app report’s methodology note for
+why it’s real, not stale, data). Because <code>CreateResource</code>
+runs once per unique <code>(job, instance)</code> pair found in the
+scrape (<code>honor_labels</code> preserves each app’s own labels), the
+collector’s per-app option behavior applies independently to App 1’s
+Resource, App 2’s Resource, <em>and</em> the scrape-metadata Resource
+(<code>observer_job</code>/<code>observer:9464</code>, covering only
+<code>up</code>/<code>scrape_*</code> metrics with no per-app
 <code>job</code>/<code>instance</code> override).</p>
 <h2 id="results-app-1-shown-app-2-is-byte-for-byte-the-same-shape-with-2-in-place-of-1-throughout">Results
 (App 1 shown; App 2 is byte-for-byte the same shape with <code>2</code>
 in place of <code>1</code> throughout)</h2>
 <table>
 <colgroup>
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Step</th>
-<th style="text-align: left;">Today (no gates)</th>
-<th style="text-align: left;">Option A — bare</th>
 <th style="text-align: left;">Option B — namespaced</th>
 <th style="text-align: left;">Option C — declared-first</th>
+<th style="text-align: left;">Option C1 — declared-first, no
+covered-name recognition</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;"><strong>1. OTel metric data model</strong>
-(in-process; option-independent)</td>
-<td style="text-align: left;"><code>Resource{service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+(in-process, both apps; option-independent)</td>
+<td style="text-align: left;">App 1:
+<code>Resource{service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code><br>App
+2: same shape, <code>_2</code>/<code>2</code></td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>2. SDK Prometheus exporter
 exposition</strong> (curled <code>observer:9464/metrics</code>;
 option-independent)</td>
 <td style="text-align: left;"><code># HELP received_samples_total</code><br><code># TYPE received_samples_total counter</code><br><code>received_samples_total{a_a=&quot;b&quot;,instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,service_instance_id=&quot;my_id1&quot;,service_name=&quot;my_service1&quot;} 1</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>3. Collector
 <code>prometheusreceiver</code> → OTLP Resource (App 1)</strong> (debug
 exporter, verbosity <code>detailed</code>)</td>
-<td style="text-align: left;"><code>Resource{service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>instance=&quot;my_instance1&quot;</code></strong><code>, service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
 <td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code>
-— <strong>no
-<code>service.name</code>/<code>service.instance.id</code></strong>
-(never-derive)</td>
+<td style="text-align: left;"><code>Resource{prometheus.job=&quot;my_job1&quot;, prometheus.instance=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.name=&quot;my_service1&quot;</code></strong><code>,</code><strong><code>service.instance.id=&quot;my_id1&quot;</code></strong><code>}</code>
+— <strong><code>service.name</code>/<code>service.instance.id</code> are
+now populated</strong> from the flattened <code>target_info</code>
+labels; no separate
+<code>service_instance_id</code>/<code>service_name</code> duplicates.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+<td style="text-align: left;"><code>Resource{prometheus.job=&quot;my_job1&quot;, prometheus.instance=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;</code></strong><code>}</code>
+— no <code>service.name</code>/<code>service.instance.id</code>
+(never-derive, no recognition)</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">— scrape-metadata Resource
 (<code>observer_job</code>, no per-app
 <code>job</code>/<code>instance</code>)</td>
-<td style="text-align: left;"><code>Resource{service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>instance=&quot;observer:9464&quot;</code></strong><code>, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code>
-— <strong>no <code>service.*</code> at all</strong>: this Resource has
-no <code>target_info</code> sample of its own to fill them in, so it’s
-genuinely service-less.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+<td style="text-align: left;"><code>Resource{prometheus.job=&quot;observer_job&quot;, prometheus.instance=&quot;observer:9464&quot;, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{prometheus.job=&quot;observer_job&quot;, prometheus.instance=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code>
+— <strong>no <code>service.*</code> at all</strong>: unaffected by
+covered-name recognition, since this Resource has no
+<code>target_info</code> sample of its own to recognize anything from.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+C</strong></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">—
-<code>Metric</code>/<code>DataPoint</code> (App 1, same block, all four
+<code>Metric</code>/<code>DataPoint</code> (App 1, same block, all three
 columns)</td>
 <td style="text-align: left;"><code>Metric{name=&quot;received_samples_total&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a_a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>4.
 <code>prometheus_remote_write</code> exporter → Prometheus series (App
-1)</strong> (queried Prometheus, <code>{path=&quot;remote_write&quot;}</code>,
-<code>my_job</code>/<code>oteljob:9464</code> excluded)</td>
+1)</strong> (queried Prometheus,
+<code>{path=&quot;remote_write&quot;}</code>)</td>
 <td style="text-align: left;"><code>received_samples_total{job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;, service_name=&quot;my_service1&quot;, service_instance_id=&quot;my_id1&quot;, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code></td>
-<td style="text-align: left;"><strong>Byte-identical to Today</strong>
-on both series.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
-<td style="text-align: left;"><strong>Byte-identical to Today</strong>
-on both series.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
-<td style="text-align: left;"><strong>Byte-identical to Today</strong>
-on both series.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
+<td style="text-align: left;"><code>received_samples_total{</code><strong><code>job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{</code><strong><code>job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;</code></strong><code>,</code><strong><code>prometheus_job=&quot;my_job1&quot;, prometheus_instance=&quot;my_instance1&quot;</code></strong><code>, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
+— <strong>the app’s own identity has replaced the observer’s assigned
+<code>job</code>/<code>instance</code></strong>.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B</strong> on both series — this is exactly what the observer was built
+to produce.</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Net effect</strong></td>
 <td style="text-align: left;">App 1 and App 2 are cleanly distinguished
 by <code>job</code>/<code>instance</code>
-(<code>my_job1</code>/<code>my_instance1</code> vs
-<code>my_job2</code>/<code>my_instance2</code>), and each app’s real
+(<code>my_job1</code>/<code>my_instance1</code>
+vs. <code>my_job2</code>/<code>my_instance2</code>), and each app’s real
 identity is queryable via <code>target_info</code>.</td>
-<td style="text-align: left;">Same wire output as Today; the OTLP
-Resource additionally carries an explicit
-<code>job</code>/<code>instance</code> pair (and the scrape-metadata
-Resource gains one too), invisible on the wire.</td>
-<td style="text-align: left;">Same as A, namespaced instead of
-bare.</td>
-<td style="text-align: left;"><strong>Also produces the intended
-output</strong> — but for a different reason than A/B: since App 1’s
-Resource is always “undeclared” by Option C’s never-derive rule, the
-exporter falls back to the
-<code>prometheus.job</code>/<code>prometheus.instance</code> pair, which
-happens to already hold the values the observer intended
-(<code>my_job1</code>/<code>my_instance1</code>). See <a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a>.</td>
+<td style="text-align: left;"><strong>Breaks the use case.</strong> App
+1 and App 2’s series now key on their own
+<code>service.name</code>/<code>service.instance.id</code>
+(<code>my_service1</code>/<code>my_id1</code>,
+<code>my_service2</code>/<code>my_id2</code>) — which, unlike the
+single-app report, is the <em>wrong</em> outcome here: the whole point
+of an observer is to assign its own identity to targets it doesn’t
+control, and this fix for the single-app collision actively defeats
+that.</td>
+<td style="text-align: left;">Reproduces the correct, intended output —
+the same output this report’s predecessor already documented under the
+name “Option C.”</td>
 </tr>
 </tbody>
 </table>
@@ -385,78 +377,35 @@ happens to already hold the values the observer intended
 <aside id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1"><p>This is the observer-specific, and rather clean,
-illustration of the design document’s point that “with never-derive in
-effect, an undeclared target yields a Resource with no
-<code>service.*</code> at all” (see the
-<code>Preserving Prometheus Job and Instance in OTLP Translation.md</code>
-doc, around line 485). The single-app reports never showed a fully
-service-less Resource because their one scrape target always had
-<em>some</em> signal it could pick up (either the app’s own
-<code>target_info</code>, or nothing to speak of); here, the
-scrape-metadata Resource has no <code>target_info</code> sample of its
-own — the two apps’ <code>target_info</code> samples get attributed to
-<em>their own</em> per-series Resources instead (see the methodology
-note) — so it’s the one Resource in this whole set of reports with no
-identity attributes at all beyond the reserved pair.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>Same reasoning as
-<code>verification-default-translation.md</code>’s footnote 2: Option
-A/B’s pair-first lookup (<code>setJobAndInstanceFromPair</code>) uses
-the bare/namespaced pair verbatim when present, and here the receiver
-populated the pair and the legacy
-<code>service.name</code>/<code>service.instance.id</code> fields with
-the <em>same</em> values
-(<code>my_job1</code>/<code>my_instance1</code>), so the two are
-indistinguishable in the final series.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>Same reasoning as
-<code>verification-default-translation.md</code>’s footnote 2: Option
-A/B’s pair-first lookup (<code>setJobAndInstanceFromPair</code>) uses
-the bare/namespaced pair verbatim when present, and here the receiver
-populated the pair and the legacy
-<code>service.name</code>/<code>service.instance.id</code> fields with
-the <em>same</em> values
-(<code>my_job1</code>/<code>my_instance1</code>), so the two are
-indistinguishable in the final series.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4"><p>Unlike the single-app default-translation report — where
-Option C’s exporter-side “is identity declared?” check never fires
-(because the SDK’s default strategy escapes the app’s declaration to
-<code>service_name</code>/<code>service_instance_id</code>, a key the
-check doesn’t look for) and it silently falls back to the
-<em>scrape’s</em> own <code>job</code>/<code>instance</code> — here that
-same fallback lands on the <em>correct</em> value. That’s not because
-Option C’s declared-identity detection started working: App 1’s Resource
-has no dotted <code>service.name</code>/<code>service.instance.id</code>
-at all (see Step 3), so
-<code>haveServiceName</code>/<code>haveInstanceID</code> are still both
-false and the “declared identity” branch still never fires. It’s because
-the reserved-pair fallback it uses instead
-(<code>prometheus.job</code>/<code>prometheus.instance</code>) was
-populated by <code>CreateResource</code> with
-<code>my_job1</code>/<code>my_instance1</code> — the value this specific
-use case wants — rather than a job-config-derived string. Change what
-value flows into the reserved pair (as the standalone/observer split
-does) and Option C’s fallback path produces whatever that is, correct or
-not; it isn’t reading the app’s declaration either way.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5"><p>Unlike the single-app default-translation report — where
-Option C’s exporter-side “is identity declared?” check never fires
-(because the SDK’s default strategy escapes the app’s declaration to
-<code>service_name</code>/<code>service_instance_id</code>, a key the
-check doesn’t look for) and it silently falls back to the
-<em>scrape’s</em> own <code>job</code>/<code>instance</code> — here that
-same fallback lands on the <em>correct</em> value. That’s not because
-Option C’s declared-identity detection started working: App 1’s Resource
-has no dotted <code>service.name</code>/<code>service.instance.id</code>
-at all (see Step 3), so
-<code>haveServiceName</code>/<code>haveInstanceID</code> are still both
-false and the “declared identity” branch still never fires. It’s because
-the reserved-pair fallback it uses instead
-(<code>prometheus.job</code>/<code>prometheus.instance</code>) was
-populated by <code>CreateResource</code> with
-<code>my_job1</code>/<code>my_instance1</code> — the value this specific
-use case wants — rather than a job-config-derived string. Change what
-value flows into the reserved pair (as the standalone/observer split
-does) and Option C’s fallback path produces whatever that is, correct or
-not; it isn’t reading the app’s declaration either way.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>Same mechanism as <a href="verification-default-translation.md">verification-default-translation.md</a>’s
+footnote 1, operating on App 1’s own per-series Resource instead of the
+whole scrape target: <code>AddTargetInfo</code>’s covered-name
+recognition (added in commit <code>78a1b6d</code>) canonicalizes the
+flattened <code>service_name</code>/<code>service_instance_id</code>
+labels from App 1’s <code>target_info</code> sample into the dotted
+<code>service.name</code>/<code>service.instance.id</code> keys, which
+<code>CreateResource</code>’s never-derive had left absent.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>This mirrors the previous version of this report’s
+finding about Option C’s scrape-metadata Resource: it has no
+<code>target_info</code> sample of its own (App 1 and App 2’s samples
+are attributed to their own per-series Resources, not this one), so
+there’s nothing for covered-name recognition to act on — it’s genuinely
+service-less under both C and C1, identically.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>This is the reverse of the single-app report’s finding,
+and the central result of this one: fixing Option C’s receiver to
+recognize flattened covered names as declared identity is a
+<em>regression</em> for the observer use case specifically. The
+exporter-side check (<code>setJobAndInstanceLabels</code>, unchanged by
+this commit) has always read “declared identity” off the literal
+presence of dotted
+<code>service.name</code>/<code>service.instance.id</code> — it has no
+way to know that in this Resource, the “declaration” isn’t the entity’s
+own honest identity claim but an artifact of an observer app
+deliberately assigning a <em>different</em> identity than the one it’s
+reporting about. Options B and C1 happen to sidestep this because they
+never populate those dotted keys via recognition in the first place;
+Option C actively creates the collision it’s trying to solve elsewhere,
+one layer up.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </aside>
 </body>

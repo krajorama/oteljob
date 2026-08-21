@@ -224,15 +224,20 @@ td strong, th strong { background: rgba(255, 200, 0, 0.25); padding: 0 0.15em; b
 One Counter, <code>NoTranslation</code> Strategy</h1>
 <p>Re-verifies <a href="../../open-telemetry/opentelemetry-go/Preserving%20Prometheus%20Job%20and%20Instance%20in%20OTLP%20Translation.md#end-to-end-comparison-one-counter-notranslation-strategy">“End-to-End
 Comparison: One Counter, <code>NoTranslation</code> Strategy”</a>
-against a real running system, all four columns, using the
-<code>oteljob</code> app’s <code>-no-translation</code> flag
-(<code>main.go</code>) and the custom <code>otelcol-custom</code>
-collector built from the <a href="https://github.com/krajorama/opentelemetry-collector-contrib/tree/krajo/job-instance-persistence"><code>krajorama/opentelemetry-collector-contrib</code>
-branch <code>krajo/job-instance-persistence</code></a>. The doc traces
-only the <code>allow-utf-8</code>-negotiated row of its escaping matrix
-(the one row where the app’s declaration collides with the scrape
-identity); this report reproduces exactly that row, and confirms it is
-in fact the negotiated scheme in this system (see Setup).</p>
+against a real running system, using the <code>oteljob</code> app’s
+<code>-no-translation</code> flag (<code>main.go</code>) and the custom
+<code>otelcol-custom</code> collector built from the <a href="https://github.com/krajorama/opentelemetry-collector-contrib/tree/krajo/job-instance-persistence"><code>krajorama/opentelemetry-collector-contrib</code>
+branch <code>krajo/job-instance-persistence</code></a>, rebuilt against
+commit <code>78a1b6d</code> (“Add POC option C1”). The doc traces only
+the <code>allow-utf-8</code>-negotiated row of its escaping matrix (the
+one row where the app’s declaration collides with the scrape identity);
+this report reproduces exactly that row, and confirms it is in fact the
+negotiated scheme in this system (see Setup).</p>
+<p>Only <strong>B, C, and C1</strong> are shown — see <a href="verification-default-translation.md">verification-default-translation.md</a>
+for why “Today” and Option A are omitted, and for what Option C1 is
+(Option C’s receiver-side behavior <em>before</em> commit
+<code>78a1b6d</code> added covered-name recognition — this report
+already covered it, just under the name “Option C”).</p>
 <p><strong>Setup</strong>: <code>oteljob</code> started with
 <code>-no-translation=true</code> (<code>docker-compose.yaml</code>,
 <code>OTELJOB_NO_TRANSLATION=true</code>) — resource
@@ -243,130 +248,95 @@ in fact the negotiated scheme in this system (see Setup).</p>
 <code>job_name=&quot;my_job&quot;</code>, target <code>oteljob:9464</code>.
 Confirmed via <code>oteljob</code>’s own request logging that the
 collector’s real scrape request carries
-<code>Accept: application/openmetrics-text;version=1.0.0;escaping=allow-utf-8;q=0.6,application/openmetrics-text;version=0.0.1;q=0.5,text/plain;version=1.0.0;escaping=allow-utf-8;q=0.4,text/plain;version=0.0.4;q=0.3,*/*;q=0.2</code>
+<code>Accept: application/openmetrics-text;version=1.0.0;escaping=allow-utf-8;q=0.6,...</code>
 — OpenMetrics 1.0 + <code>allow-utf-8</code> is the top preference,
-matching the doc’s stated scrape default. Egress via the collector’s
-<code>prometheus_remote_write</code> exporter to the custom-built
-Prometheus, as in the default-translation report. All four variants were
-actually run in the compose stack
-(<code>OTELJOB_NO_TRANSLATION=true OTELCOL_FEATURE_GATES=&lt;gates&gt; docker compose up -d</code>),
-with Prometheus’s storage wiped
-(<code>--force-recreate prometheus</code>) between each variant to avoid
-stale series from a prior run contaminating the query results — an early
-capture without this step returned duplicate/stale series and had to be
-redone.</p>
+matching the doc’s stated scrape default. Egress via
+<code>prometheus_remote_write</code>. All three columns were actually
+run, with Prometheus’s storage wiped between captures.</p>
 <h2 id="results">Results</h2>
 <table>
 <colgroup>
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
-<col style="width: 20%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Step</th>
-<th style="text-align: left;">Today (no gates)</th>
-<th style="text-align: left;">Option A — bare</th>
 <th style="text-align: left;">Option B — namespaced</th>
 <th style="text-align: left;">Option C — declared-first</th>
+<th style="text-align: left;">Option C1 — declared-first, no
+covered-name recognition</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: left;"><strong>1. OTel metric data model</strong>
-(in-process, SDK)</td>
+(in-process, SDK; option-independent)</td>
 <td style="text-align: left;"><code>Resource{service.name=&quot;my_service&quot;, service.instance.id=&quot;my_id&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>2. SDK Prometheus exporter
-exposition</strong> (curled <code>oteljob:9464/metrics</code> with the
-collector’s real <code>Accept</code> header; negotiated
-<code>Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=allow-utf-8</code><a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>)</td>
+exposition</strong> (curled with the collector’s real
+<code>Accept</code> header; negotiated
+<code>Content-Type: text/plain; version=0.0.4; charset=utf-8; escaping=allow-utf-8</code><a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>; option-independent)</td>
 <td style="text-align: left;"><code># HELP received_samples</code><br><code># TYPE received_samples counter</code><br><code>received_samples{&quot;a.a&quot;=&quot;b&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{&quot;service.instance.id&quot;=&quot;my_id&quot;,&quot;service.name&quot;=&quot;my_service&quot;,&quot;telemetry.sdk.language&quot;=&quot;go&quot;,&quot;telemetry.sdk.name&quot;=&quot;opentelemetry&quot;,&quot;telemetry.sdk.version&quot;=&quot;1.45.0&quot;} 1</code></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>3. Collector
 <code>prometheusreceiver</code> → OTLP Resource</strong> (debug
 exporter, verbosity <code>detailed</code>)</td>
-<td style="text-align: left;"><code>Resource{service.name=&quot;my_service&quot;, service.instance.id=&quot;my_id&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, telemetry.sdk.language=&quot;go&quot;, telemetry.sdk.name=&quot;opentelemetry&quot;, telemetry.sdk.version=&quot;1.45.0&quot;}</code>
-— <strong>no <code>my_job</code>/<code>oteljob:9464</code>
-anywhere</strong>: the app’s declaration has overwritten the scrape
-identity entirely.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_service&quot;, service.instance.id=&quot;my_id&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, telemetry.sdk.language=&quot;go&quot;, telemetry.sdk.name=&quot;opentelemetry&quot;, telemetry.sdk.version=&quot;1.45.0&quot;}</code>
-— bare <code>job</code>/<code>instance</code> survive (receiver never
-overwrites them), but
-<code>service.name</code>/<code>service.instance.id</code> are
-<strong>still overwritten by the declaration</strong>, exactly as in
-Today.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
 <td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_service&quot;, service.instance.id=&quot;my_id&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, telemetry.sdk.language=&quot;go&quot;, telemetry.sdk.name=&quot;opentelemetry&quot;, telemetry.sdk.version=&quot;1.45.0&quot;}</code>
 — namespaced
 <code>prometheus.job</code>/<code>prometheus.instance</code> survive
 untouched, while
 <code>service.name</code>/<code>service.instance.id</code> are
-<strong>overwritten by the declaration</strong>, the same collision
-mechanism as Today and Option A.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.instance.id=&quot;my_id&quot;</code></strong><code>,</code><strong><code>service.name=&quot;my_service&quot;</code></strong><code>, telemetry.sdk.language=&quot;go&quot;, telemetry.sdk.name=&quot;opentelemetry&quot;, telemetry.sdk.version=&quot;1.45.0&quot;}</code>
-— receiver never derives <code>service.*</code> from job/instance, but
-the app’s own declaration (dotted, unescaped under
-<code>NoTranslation</code>) reaches this Resource via the <em>same</em>
-unmodified target-info code path as Today.<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></td>
+overwritten by the app’s declaration.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B.</strong><a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B.</strong><a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">—
-<code>Metric</code>/<code>DataPoint</code> (same block, all four
+<code>Metric</code>/<code>DataPoint</code> (same block, all three
 columns)</td>
 <td style="text-align: left;"><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code>
-— <strong>type stays <code>Sum</code>/<code>counter</code>, not
-<code>Gauge</code>/<code>unknown</code></strong><a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a></td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
-<td style="text-align: left;">Identical to Today</td>
+— type stays <code>Sum</code>/<code>counter</code>, not
+<code>Gauge</code>/<code>unknown</code><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></td>
+<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Option B</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>4.
 <code>prometheus_remote_write</code> exporter → Prometheus
 series</strong> (queried Prometheus, <code>{path=&quot;remote_write&quot;}</code>,
 storage wiped before each capture)</td>
-<td style="text-align: left;"><code>received_samples_total{job=&quot;my_service&quot;, instance=&quot;my_id&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a><br><code>target_info{job=&quot;my_service&quot;, instance=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;, url_scheme=&quot;http&quot;} 1</code></td>
-<td style="text-align: left;"><code>received_samples_total{</code><strong><code>job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{</code><strong><code>job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;</code></strong><code>, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;, url_scheme=&quot;http&quot;} 1</code>
-— <strong>no <code>service_name</code>/<code>service_instance_id</code>
-labels at all</strong>, on either series.<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a></td>
+<td style="text-align: left;"><code>received_samples_total{job=&quot;my_service&quot;, instance=&quot;my_id&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a><br><code>target_info{job=&quot;my_service&quot;, instance=&quot;my_id&quot;, prometheus_job=&quot;my_job&quot;, prometheus_instance=&quot;oteljob:9464&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;, url_scheme=&quot;http&quot;} 1</code></td>
 <td style="text-align: left;"><strong>Byte-identical to Option
-A</strong> on both series<a href="#fn9" class="footnote-ref" id="fnref9" role="doc-noteref"><sup>9</sup></a></td>
-<td style="text-align: left;"><code>received_samples_total{</code><strong><code>job=&quot;my_service&quot;, instance=&quot;my_id&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{</code><strong><code>job=&quot;my_service&quot;, instance=&quot;my_id&quot;</code></strong><code>,</code><strong><code>prometheus_job=&quot;my_job&quot;, prometheus_instance=&quot;oteljob:9464&quot;</code></strong><code>, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;, url_scheme=&quot;http&quot;} 1</code>
-— declared identity wins; the reserved pair survives as ordinary
-<code>target_info</code> metadata.<a href="#fn10" class="footnote-ref" id="fnref10" role="doc-noteref"><sup>10</sup></a></td>
+B</strong> on both series.<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B</strong> on both series.<a href="#fn8" class="footnote-ref" id="fnref8" role="doc-noteref"><sup>8</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Net effect</strong></td>
-<td style="text-align: left;">Scrape identity destroyed:
+<td style="text-align: left;">Declared identity wins:
 <code>received_samples_total{job=&quot;my_service&quot;, instance=&quot;my_id&quot;, ...}</code>
-— the series carries the app’s own values, not the scrape’s.</td>
-<td style="text-align: left;"><code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, ...}</code>
-— scrape identity round-trips byte-exact, matching the doc’s prediction.
-But <code>target_info</code> carries <strong>only</strong>
-<code>job</code>/<code>instance</code> plus <code>[enrich]</code>,
-<strong>not</strong>
-<code>service_name</code>/<code>service_instance_id</code> as the doc’s
-proposal calls for.<a href="#fn11" class="footnote-ref" id="fnref11" role="doc-noteref"><sup>11</sup></a></td>
-<td style="text-align: left;"><code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, ...}</code>
-— same outcome as Option A: scrape identity round-trips, and
-<code>target_info</code> is likewise missing
-<code>service_name</code>/<code>service_instance_id</code>.<a href="#fn12" class="footnote-ref" id="fnref12" role="doc-noteref"><sup>12</sup></a></td>
-<td style="text-align: left;"><code>received_samples_total{job=&quot;my_service&quot;, instance=&quot;my_id&quot;, ...}</code>
-— the app’s own identity is <strong>declared</strong>, not the scrape’s,
-and <code>target_info</code> carries the scrape pair as
-<code>prometheus_job=&quot;my_job&quot;</code>/<code>prometheus_instance=&quot;oteljob:9464&quot;</code>
-metadata. This is the one column where declared-first identity is
-actually observable in this POC.</td>
+carries the app’s own values, and the scrape’s
+<code>job</code>/<code>instance</code> survive as
+<code>target_info</code> metadata
+(<code>prometheus_job</code>/<code>prometheus_instance</code>).</td>
+<td style="text-align: left;"><strong>Identical outcome to Option
+B</strong> — under <code>NoTranslation</code>, covered-name recognition
+has nothing to do, since the declaration already arrives dotted.</td>
+<td style="text-align: left;"><strong>Identical outcome to Option B and
+Option C</strong> — the two-gate distinction this branch introduces is
+entirely invisible under <code>NoTranslation</code>.</td>
 </tr>
 </tbody>
 </table>
@@ -376,198 +346,127 @@ actually observable in this POC.</td>
 <ol>
 <li id="fn1"><p><code>oteljob</code>’s <code>/metrics</code> handler
 (<code>main.go</code>) is built on the bare
-<code>promhttp.Handler()</code>. In
-<code>github.com/prometheus/client_golang@v1.24.1</code>
-(<code>prometheus/promhttp/http.go</code>), that handler only negotiates
-OpenMetrics when constructed via
-<code>HandlerFor(..., HandlerOpts{EnableOpenMetrics: true})</code>; the
-zero-config <code>Handler()</code> always calls
-<code>expfmt.Negotiate</code> (never
-<code>NegotiateIncludingOpenMetrics</code>), so it <em>always</em> falls
-back to legacy <code>text/plain;version=0.0.4</code> — confirmed by
-curling with the collector’s exact <code>Accept</code> header and
-checking the response’s <code>Content-Type</code> verbatim. The
+<code>promhttp.Handler()</code>, which never negotiates OpenMetrics (see
+<code>verification-default-translation.md</code>’s sibling report for
+the same finding under the default strategy). The
 <code>escaping=allow-utf-8</code> parameter is still honored (dotted
-keys appear on the wire), but the OpenMetrics-specific rule the source
-document’s note (g) relies on — a counter family without a
-<code>_total</code> suffix gets typed <code>unknown</code> — is an
-OpenMetrics-exposition-format rule and never fires against
-<code>text/plain</code> 0.0.4. This is why <code>DataType</code> stays
-<code>Sum</code>/<code>counter</code> here instead of degrading to
-<code>Gauge</code>/<code>unknown</code> as the doc’s table predicts, and
-it is option-independent (same root cause, same effect, in all four
-columns).<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>The receiver’s own logic for this collision is
-<em>entirely unmodified</em> by the
-<code>krajo/job-instance-persistence</code> branch:
-<code>AddTargetInfo</code>
-(<code>receiver/prometheusreceiver/internal/transaction.go</code>)
-copies every scraped <code>target_info</code> label except
-<code>job</code>/<code>instance</code>/<code>__name__</code> onto the
-Resource verbatim via <code>attrs.PutStr(lbl.Name, lbl.Value)</code>.
-Because <code>NoTranslation</code> + <code>allow-utf-8</code> means the
-label arrives spelled exactly
-<code>service.name</code>/<code>service.instance.id</code> (dotted),
-this collides with the same dotted keys <code>CreateResource</code>
-populates from the job/instance defaulting (Today, A, B) or simply fills
-in an otherwise-absent key (Option C). The three options only change
-what <code>CreateResource</code> puts there <em>first</em>; they do not
-change this collision mechanism at all.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>The receiver’s own logic for this collision is
-<em>entirely unmodified</em> by the
-<code>krajo/job-instance-persistence</code> branch:
-<code>AddTargetInfo</code>
-(<code>receiver/prometheusreceiver/internal/transaction.go</code>)
-copies every scraped <code>target_info</code> label except
-<code>job</code>/<code>instance</code>/<code>__name__</code> onto the
-Resource verbatim via <code>attrs.PutStr(lbl.Name, lbl.Value)</code>.
-Because <code>NoTranslation</code> + <code>allow-utf-8</code> means the
-label arrives spelled exactly
-<code>service.name</code>/<code>service.instance.id</code> (dotted),
-this collides with the same dotted keys <code>CreateResource</code>
-populates from the job/instance defaulting (Today, A, B) or simply fills
-in an otherwise-absent key (Option C). The three options only change
-what <code>CreateResource</code> puts there <em>first</em>; they do not
-change this collision mechanism at all.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4"><p>The receiver’s own logic for this collision is
-<em>entirely unmodified</em> by the
-<code>krajo/job-instance-persistence</code> branch:
-<code>AddTargetInfo</code>
-(<code>receiver/prometheusreceiver/internal/transaction.go</code>)
-copies every scraped <code>target_info</code> label except
-<code>job</code>/<code>instance</code>/<code>__name__</code> onto the
-Resource verbatim via <code>attrs.PutStr(lbl.Name, lbl.Value)</code>.
-Because <code>NoTranslation</code> + <code>allow-utf-8</code> means the
-label arrives spelled exactly
-<code>service.name</code>/<code>service.instance.id</code> (dotted),
-this collides with the same dotted keys <code>CreateResource</code>
-populates from the job/instance defaulting (Today, A, B) or simply fills
-in an otherwise-absent key (Option C). The three options only change
-what <code>CreateResource</code> puts there <em>first</em>; they do not
-change this collision mechanism at all.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5"><p>The receiver’s own logic for this collision is
-<em>entirely unmodified</em> by the
-<code>krajo/job-instance-persistence</code> branch:
-<code>AddTargetInfo</code>
-(<code>receiver/prometheusreceiver/internal/transaction.go</code>)
-copies every scraped <code>target_info</code> label except
-<code>job</code>/<code>instance</code>/<code>__name__</code> onto the
-Resource verbatim via <code>attrs.PutStr(lbl.Name, lbl.Value)</code>.
-Because <code>NoTranslation</code> + <code>allow-utf-8</code> means the
-label arrives spelled exactly
-<code>service.name</code>/<code>service.instance.id</code> (dotted),
-this collides with the same dotted keys <code>CreateResource</code>
-populates from the job/instance defaulting (Today, A, B) or simply fills
-in an otherwise-absent key (Option C). The three options only change
-what <code>CreateResource</code> puts there <em>first</em>; they do not
-change this collision mechanism at all.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn6"><p><code>oteljob</code>’s <code>/metrics</code> handler
+keys appear on the wire), but the OpenMetrics-only “counter without
+<code>_total</code> degrades to <code>unknown</code>” rule never fires
+against the <code>text/plain</code> 0.0.4 fallback — hence
+<code>DataType</code> stays <code>Sum</code>/<code>counter</code>,
+option-independently.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>The receiver’s collision mechanism is unchanged by
+commit <code>78a1b6d</code>’s addition for the <em>undeclared</em> path,
+but Option B doesn’t take that path at all: <code>CreateResource</code>
+still defaults
+<code>service.name</code>/<code>service.instance.id</code> from
+job/instance for B, and <code>AddTargetInfo</code> still overwrites them
+with the app’s declaration for every option that leaves them derived in
+the first place. Nothing about covered-name recognition changes this,
+because recognition only matters when <code>CreateResource</code> left
+the dotted keys <em>absent</em> (Option C/C1’s never-derive) — Option B
+never does that.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>This is the central finding of this report:
+<strong>Option C’s new covered-name recognition is a no-op under
+<code>NoTranslation</code>.</strong> Recognition exists to canonicalize
+a <em>flattened</em>
+<code>service_name</code>/<code>service_instance_id</code> label into
+the dotted <code>service.name</code>/<code>service.instance.id</code>
+keys the exporter checks for. Under <code>NoTranslation</code>, the SDK
+never flattens anything — <code>target_info</code> already carries the
+dotted spelling directly (see Step 2) — so there is no flattened alias
+for recognition to canonicalize, and
+<code>addTargetInfoWithCoveredNameRecognition</code>’s single-spelling
+case reduces to exactly the same <code>attrs.PutStr</code> the old
+verbatim-copy loop would have done. C and C1 are therefore
+byte-identical here, and — because the declared-identity check already
+found what it needed even before this commit (see <a href="verification-default-translation.md">verification-default-translation.md</a>’s
+original analysis, where <code>NoTranslation</code> was the one strategy
+where the pre-C1 “Option C” already achieved declared-first) — both are
+also identical to what Option B already produces once the collision is
+accounted for. The interesting divergence between C and C1 is specific
+to the <em>default</em> translation strategy; see the companion
+report.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>This is the central finding of this report:
+<strong>Option C’s new covered-name recognition is a no-op under
+<code>NoTranslation</code>.</strong> Recognition exists to canonicalize
+a <em>flattened</em>
+<code>service_name</code>/<code>service_instance_id</code> label into
+the dotted <code>service.name</code>/<code>service.instance.id</code>
+keys the exporter checks for. Under <code>NoTranslation</code>, the SDK
+never flattens anything — <code>target_info</code> already carries the
+dotted spelling directly (see Step 2) — so there is no flattened alias
+for recognition to canonicalize, and
+<code>addTargetInfoWithCoveredNameRecognition</code>’s single-spelling
+case reduces to exactly the same <code>attrs.PutStr</code> the old
+verbatim-copy loop would have done. C and C1 are therefore
+byte-identical here, and — because the declared-identity check already
+found what it needed even before this commit (see <a href="verification-default-translation.md">verification-default-translation.md</a>’s
+original analysis, where <code>NoTranslation</code> was the one strategy
+where the pre-C1 “Option C” already achieved declared-first) — both are
+also identical to what Option B already produces once the collision is
+accounted for. The interesting divergence between C and C1 is specific
+to the <em>default</em> translation strategy; see the companion
+report.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p><code>oteljob</code>’s <code>/metrics</code> handler
 (<code>main.go</code>) is built on the bare
-<code>promhttp.Handler()</code>. In
-<code>github.com/prometheus/client_golang@v1.24.1</code>
-(<code>prometheus/promhttp/http.go</code>), that handler only negotiates
-OpenMetrics when constructed via
-<code>HandlerFor(..., HandlerOpts{EnableOpenMetrics: true})</code>; the
-zero-config <code>Handler()</code> always calls
-<code>expfmt.Negotiate</code> (never
-<code>NegotiateIncludingOpenMetrics</code>), so it <em>always</em> falls
-back to legacy <code>text/plain;version=0.0.4</code> — confirmed by
-curling with the collector’s exact <code>Accept</code> header and
-checking the response’s <code>Content-Type</code> verbatim. The
+<code>promhttp.Handler()</code>, which never negotiates OpenMetrics (see
+<code>verification-default-translation.md</code>’s sibling report for
+the same finding under the default strategy). The
 <code>escaping=allow-utf-8</code> parameter is still honored (dotted
-keys appear on the wire), but the OpenMetrics-specific rule the source
-document’s note (g) relies on — a counter family without a
-<code>_total</code> suffix gets typed <code>unknown</code> — is an
-OpenMetrics-exposition-format rule and never fires against
-<code>text/plain</code> 0.0.4. This is why <code>DataType</code> stays
-<code>Sum</code>/<code>counter</code> here instead of degrading to
-<code>Gauge</code>/<code>unknown</code> as the doc’s table predicts, and
-it is option-independent (same root cause, same effect, in all four
-columns).<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn7"><p>The doc’s own table predicts metric name
-<code>foo</code> (no <code>_total</code> suffix) for this scenario,
-reasoning from the OpenMetrics <code>unknown</code>-type degradation
-described in its note (g). Because that degradation never happens here
-(see [^1]), the OTLP metric keeps its genuine <code>Sum</code>/counter
-type, and the collector’s <code>prometheus_remote_write</code> exporter
-— <code>add_metric_suffixes: true</code> by default — adds the
-<code>_total</code> suffix it would add to any real counter. So the
-actual series name is <code>received_samples_total</code>, not
-<code>received_samples</code>, in all four columns; this is a second,
-causally-linked consequence of the same root cause as [^1], not a new
-discrepancy.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn8"><p><code>identifyingAttrNames</code>
-(<code>pkg/translator/prometheusremotewrite/helper.go</code>) always
-includes the baseline
-<code>service.namespace</code>/<code>service.name</code>/<code>service.instance.id</code>
-in the set of attributes excluded from <code>target_info</code>’s
-ordinary labels, for every option — Option A only <em>adds</em>
-<code>job</code>/<code>instance</code> to that exclusion set, it never
-removes the baseline three. The source document’s note (i) calls for
-Option A/B implementations to “stop suppressing
-<code>service.name</code>/<code>service.instance.id</code>” so they
-appear as ordinary <code>target_info</code> labels; this POC does not
-implement that part of the proposal, so
-<code>service_name</code>/<code>service_instance_id</code> never appear
-on <code>target_info</code> under Option A or B, regardless of
-translation strategy.<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn9"><p>Same reasoning as the default-translation report:
-<code>setJobAndInstanceFromPair</code> (Option B branch) uses
-<code>prometheus.job</code>/<code>prometheus.instance</code> verbatim
-when present, and here they hold the same values
-(<code>my_job</code>/<code>oteljob:9464</code>) the bare pair holds
-under Option A, so the two are indistinguishable in the final series.<a href="#fnref9" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn10"><p>This is the scenario where Option C’s exporter-side “is
-identity declared?” check (<code>setJobAndInstanceLabels</code>, Option
-C branch) actually finds what it’s looking for. It tests for the literal
-dotted resource keys
-<code>service.name</code>/<code>service.instance.id</code>. Under the
-<em>default</em> translation strategy those keys never reach the
-collector under that spelling (see <a href="verification-default-translation.md"><code>verification-default-translation.md</code></a>,
-footnote 3); under <code>NoTranslation</code> + <code>allow-utf-8</code>
-they do, because nothing escapes them between the SDK and the receiver
-(see [^2]). So <code>haveServiceName</code>/<code>haveInstanceID</code>
-are both true here, the exporter takes the “declared identity” branch
-(unchanged legacy derivation: <code>job</code>/<code>instance</code>
-come from <code>service.name</code>/<code>service.instance.id</code>),
-and <code>identifyingAttrNames</code>’s Option C branch — which only
-excludes the reserved pair when the Resource is <em>undeclared</em> —
-leaves <code>prometheus.job</code>/<code>prometheus.instance</code> in
-target_info’s ordinary attributes. Both halves of “declared-first”
-(series identity from the declaration, reserved pair demoted to
-metadata) match the source document’s own prediction for this column
-almost exactly, modulo the metric-name-suffix and extra
-<code>telemetry_sdk_*</code> labels already explained above.<a href="#fnref10" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn11"><p><code>identifyingAttrNames</code>
-(<code>pkg/translator/prometheusremotewrite/helper.go</code>) always
-includes the baseline
-<code>service.namespace</code>/<code>service.name</code>/<code>service.instance.id</code>
-in the set of attributes excluded from <code>target_info</code>’s
-ordinary labels, for every option — Option A only <em>adds</em>
-<code>job</code>/<code>instance</code> to that exclusion set, it never
-removes the baseline three. The source document’s note (i) calls for
-Option A/B implementations to “stop suppressing
-<code>service.name</code>/<code>service.instance.id</code>” so they
-appear as ordinary <code>target_info</code> labels; this POC does not
-implement that part of the proposal, so
-<code>service_name</code>/<code>service_instance_id</code> never appear
-on <code>target_info</code> under Option A or B, regardless of
-translation strategy.<a href="#fnref11" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn12"><p><code>identifyingAttrNames</code>
-(<code>pkg/translator/prometheusremotewrite/helper.go</code>) always
-includes the baseline
-<code>service.namespace</code>/<code>service.name</code>/<code>service.instance.id</code>
-in the set of attributes excluded from <code>target_info</code>’s
-ordinary labels, for every option — Option A only <em>adds</em>
-<code>job</code>/<code>instance</code> to that exclusion set, it never
-removes the baseline three. The source document’s note (i) calls for
-Option A/B implementations to “stop suppressing
-<code>service.name</code>/<code>service.instance.id</code>” so they
-appear as ordinary <code>target_info</code> labels; this POC does not
-implement that part of the proposal, so
-<code>service_name</code>/<code>service_instance_id</code> never appear
-on <code>target_info</code> under Option A or B, regardless of
-translation strategy.<a href="#fnref12" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+keys appear on the wire), but the OpenMetrics-only “counter without
+<code>_total</code> degrades to <code>unknown</code>” rule never fires
+against the <code>text/plain</code> 0.0.4 fallback — hence
+<code>DataType</code> stays <code>Sum</code>/<code>counter</code>,
+option-independently.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>The doc’s own table predicts metric name
+<code>foo</code> (no <code>_total</code> suffix), reasoning from an
+OpenMetrics-only type degradation that doesn’t apply here — see [^1].
+The collector’s <code>add_metric_suffixes: true</code> default re-adds
+<code>_total</code> to what remains a genuine counter, so the real
+series name is <code>received_samples_total</code> throughout.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>This is the central finding of this report:
+<strong>Option C’s new covered-name recognition is a no-op under
+<code>NoTranslation</code>.</strong> Recognition exists to canonicalize
+a <em>flattened</em>
+<code>service_name</code>/<code>service_instance_id</code> label into
+the dotted <code>service.name</code>/<code>service.instance.id</code>
+keys the exporter checks for. Under <code>NoTranslation</code>, the SDK
+never flattens anything — <code>target_info</code> already carries the
+dotted spelling directly (see Step 2) — so there is no flattened alias
+for recognition to canonicalize, and
+<code>addTargetInfoWithCoveredNameRecognition</code>’s single-spelling
+case reduces to exactly the same <code>attrs.PutStr</code> the old
+verbatim-copy loop would have done. C and C1 are therefore
+byte-identical here, and — because the declared-identity check already
+found what it needed even before this commit (see <a href="verification-default-translation.md">verification-default-translation.md</a>’s
+original analysis, where <code>NoTranslation</code> was the one strategy
+where the pre-C1 “Option C” already achieved declared-first) — both are
+also identical to what Option B already produces once the collision is
+accounted for. The interesting divergence between C and C1 is specific
+to the <em>default</em> translation strategy; see the companion
+report.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn8"><p>This is the central finding of this report:
+<strong>Option C’s new covered-name recognition is a no-op under
+<code>NoTranslation</code>.</strong> Recognition exists to canonicalize
+a <em>flattened</em>
+<code>service_name</code>/<code>service_instance_id</code> label into
+the dotted <code>service.name</code>/<code>service.instance.id</code>
+keys the exporter checks for. Under <code>NoTranslation</code>, the SDK
+never flattens anything — <code>target_info</code> already carries the
+dotted spelling directly (see Step 2) — so there is no flattened alias
+for recognition to canonicalize, and
+<code>addTargetInfoWithCoveredNameRecognition</code>’s single-spelling
+case reduces to exactly the same <code>attrs.PutStr</code> the old
+verbatim-copy loop would have done. C and C1 are therefore
+byte-identical here, and — because the declared-identity check already
+found what it needed even before this commit (see <a href="verification-default-translation.md">verification-default-translation.md</a>’s
+original analysis, where <code>NoTranslation</code> was the one strategy
+where the pre-C1 “Option C” already achieved declared-first) — both are
+also identical to what Option B already produces once the collision is
+accounted for. The interesting divergence between C and C1 is specific
+to the <em>default</em> translation strategy; see the companion
+report.<a href="#fnref8" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </aside>
 </body>
