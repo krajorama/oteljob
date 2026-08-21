@@ -229,7 +229,8 @@ metrics about two other applications it observes, each with its own
 <code>job</code>/<code>instance</code> identity — under the SDK’s
 <strong><code>NoTranslation</code></strong> strategy, using the
 <code>krajo/job-instance-persistence</code> fork’s Options B, C, and C1
-(rebuilt against commit <code>78a1b6d</code>). Companion to <a href="verification-observer-default-translation.md">verification-observer-default-translation.md</a>.</p>
+(rebuilt against commit <code>78a1b6d</code>), alongside
+<strong>Current</strong> (no gates). Companion to <a href="verification-observer-default-translation.md">verification-observer-default-translation.md</a>.</p>
 <p><strong>Implementation and setup</strong>: identical to the
 default-translation report, with
 <code>OBSERVER_NO_TRANSLATION=true</code>. App 1 —
@@ -239,7 +240,7 @@ default-translation report, with
 2: same shape with <code>_2</code>/<code>2</code>). Scraped as
 <code>job_name=&quot;observer_job&quot;</code>, target <code>observer:9464</code>,
 <code>honor_labels: true</code>, egress via
-<code>prometheus_remote_write</code>. All three columns were actually
+<code>prometheus_remote_write</code>. All four columns were actually
 run, Prometheus’s storage wiped between captures. Same methodology note
 as the default-translation report applies: the inactive
 <code>my_job</code>/<code>oteljob:9464</code> scrape target’s benign
@@ -250,14 +251,16 @@ from the tables below.</p>
 in place of <code>1</code> throughout)</h2>
 <table>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Step</th>
+<th style="text-align: left;">Current (no gates)</th>
 <th style="text-align: left;">Option B — namespaced</th>
 <th style="text-align: left;">Option C — declared-first</th>
 <th style="text-align: left;">Option C1 — declared-first, no
@@ -269,73 +272,90 @@ covered-name recognition</th>
 <td style="text-align: left;"><strong>1. OTel metric data model</strong>
 (in-process; option-independent)</td>
 <td style="text-align: left;"><code>Resource{service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, job=&quot;my_job1&quot;, instance=&quot;my_instance1&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Option B</td>
-<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>2. SDK Prometheus exporter
 exposition</strong> (curled <code>observer:9464/metrics</code> with the
 collector’s real <code>Accept</code> header; option-independent)</td>
 <td style="text-align: left;"><code># HELP received_samples</code><br><code># TYPE received_samples counter</code><br><code>received_samples{&quot;a.a&quot;=&quot;b&quot;,instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{instance=&quot;my_instance1&quot;,job=&quot;my_job1&quot;,&quot;service.instance.id&quot;=&quot;my_id1&quot;,&quot;service.name&quot;=&quot;my_service1&quot;} 1</code></td>
-<td style="text-align: left;">Identical to Option B</td>
-<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>3. Collector
 <code>prometheusreceiver</code> → OTLP Resource (App 1)</strong> (debug
 exporter, verbosity <code>detailed</code>)</td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;}</code>
+<td style="text-align: left;"><code>Resource{service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;}</code>
 — the app’s declaration overwrites the job-derived
-<code>service.name</code>/<code>service.instance.id</code>.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
-<td style="text-align: left;"><strong>Byte-identical to Option
-B.</strong><a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<code>service.name</code>/<code>service.instance.id</code>, and there’s
+no gate storing a separate pair to survive it.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, service.name=&quot;my_service1&quot;, service.instance.id=&quot;my_id1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;}</code>
+— same collision, but the namespaced pair now survives untouched
+alongside it.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
 <td style="text-align: left;"><strong>Byte-identical to Option
 B.</strong><a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B.</strong><a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">— scrape-metadata Resource
 (<code>observer_job</code>, no per-app
 <code>job</code>/<code>instance</code>)</td>
-<td style="text-align: left;"><code>Resource{prometheus.job=&quot;observer_job&quot;, prometheus.instance=&quot;observer:9464&quot;, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{prometheus.job=&quot;observer_job&quot;, prometheus.instance=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code>
+<td style="text-align: left;"><code>Resource{service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code>
 — no <code>service.*</code> at all</td>
 <td style="text-align: left;"><strong>Byte-identical to Option
 C</strong></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">—
-<code>Metric</code>/<code>DataPoint</code> (App 1, same block, all three
+<code>Metric</code>/<code>DataPoint</code> (App 1, same block, all four
 columns)</td>
 <td style="text-align: left;"><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code>
 — type stays <code>Sum</code>/<code>counter</code>, not
-<code>Gauge</code>/<code>unknown</code><a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
-<td style="text-align: left;">Identical to Option B</td>
-<td style="text-align: left;">Identical to Option B</td>
+<code>Gauge</code>/<code>unknown</code><a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>4.
 <code>prometheus_remote_write</code> exporter → Prometheus series (App
 1)</strong> (queried Prometheus,
 <code>{path=&quot;remote_write&quot;}</code>)</td>
-<td style="text-align: left;"><code>received_samples_total{job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;, prometheus_job=&quot;my_job1&quot;, prometheus_instance=&quot;my_instance1&quot;, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code></td>
-<td style="text-align: left;"><strong>Byte-identical to Option
-B</strong> on both series.<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></td>
+<td style="text-align: left;"><code>received_samples_total{job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
+— <strong>no
+<code>prometheus_job</code>/<code>prometheus_instance</code></strong>:
+nothing stored the observer’s pair, so it leaves no trace at all.</td>
+<td style="text-align: left;"><code>received_samples_total{job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;,</code><strong><code>prometheus_job=&quot;my_job1&quot;, prometheus_instance=&quot;my_instance1&quot;</code></strong><code>, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
+— same series identity as Current, but the observer’s assigned pair
+survives as metadata.</td>
 <td style="text-align: left;"><strong>Byte-identical to Option
 B</strong> on both series.<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B</strong> on both series.<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Net effect</strong></td>
-<td style="text-align: left;"><strong>Broken, same as this report’s
-predecessor’s “Option C” column</strong>: App 1 and App 2’s series key
-on their own <code>service.name</code>/<code>service.instance.id</code>,
-losing the <code>job</code>/<code>instance</code> distinction the
-observer assigns — but the observer’s intended identity at least
-survives as <code>target_info</code> metadata
-(<code>prometheus_job</code>/<code>prometheus_instance</code>).</td>
+<td style="text-align: left;"><strong>Broken</strong>: App 1 and App 2’s
+series key on their own
+<code>service.name</code>/<code>service.instance.id</code>, losing the
+<code>job</code>/<code>instance</code> distinction the observer assigns,
+with no trace of it anywhere.</td>
+<td style="text-align: left;"><strong>Broken the same way</strong>, but
+the observer’s intended identity at least survives as
+<code>target_info</code> metadata
+(<code>prometheus_job</code>/<code>prometheus_instance</code>), since
+Option B always stores the pair regardless of what’s declared.</td>
 <td style="text-align: left;"><strong>Identical outcome to Option
 B</strong> — covered-name recognition has nothing to do under
 <code>NoTranslation</code>, since the declaration already arrives
-dotted.<a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a></td>
+dotted.</td>
 <td style="text-align: left;"><strong>Identical outcome to Option B and
 Option C.</strong></td>
 </tr>
@@ -349,23 +369,24 @@ Option C.</strong></td>
 <code>verification-notranslation.md</code>’s footnote 2, recurring here
 per observed app: <code>CreateResource</code> derives
 <code>service.name=&quot;my_job1&quot;</code>/<code>service.instance.id=&quot;my_instance1&quot;</code>
-from App 1’s per-series labels, and <code>AddTargetInfo</code> then
-overwrites those same dotted keys with the app’s own declaration, since
-under <code>NoTranslation</code> that declaration arrives already
-spelled <code>service.name</code>/<code>service.instance.id</code>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>This is the same central finding as
-<code>verification-notranslation.md</code>’s footnote 3, confirmed again
-here: Option C’s covered-name recognition only matters when a Resource’s
-declared identity would otherwise arrive <em>flattened</em>
-(<code>service_name</code>/<code>service_instance_id</code>) — which
-only happens under the default translation strategy. Under
-<code>NoTranslation</code> there’s no flattened spelling to recognize,
-so <code>addTargetInfoWithCoveredNameRecognition</code> reduces to the
-same single-spelling <code>attrs.PutStr</code> the old (C1)
-verbatim-copy loop already did, and C/C1/B all converge on the same
-output once the collision is accounted for. Contrast with <a href="verification-observer-default-translation.md">verification-observer-default-translation.md</a>,
-where this same commit produces a real, and counterproductive,
-behavioral change for this use case.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+from App 1’s per-series labels (Current), or additionally stores the
+namespaced pair alongside them (B) — the pair itself, stored under
+different keys entirely, is untouched by what happens next.
+<code>AddTargetInfo</code> then overwrites the dotted keys with the
+app’s own declaration, since under <code>NoTranslation</code> that
+declaration arrives already spelled
+<code>service.name</code>/<code>service.instance.id</code>.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Same collision mechanism as
+<code>verification-notranslation.md</code>’s footnote 2, recurring here
+per observed app: <code>CreateResource</code> derives
+<code>service.name=&quot;my_job1&quot;</code>/<code>service.instance.id=&quot;my_instance1&quot;</code>
+from App 1’s per-series labels (Current), or additionally stores the
+namespaced pair alongside them (B) — the pair itself, stored under
+different keys entirely, is untouched by what happens next.
+<code>AddTargetInfo</code> then overwrites the dotted keys with the
+app’s own declaration, since under <code>NoTranslation</code> that
+declaration arrives already spelled
+<code>service.name</code>/<code>service.instance.id</code>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn3"><p>This is the same central finding as
 <code>verification-notranslation.md</code>’s footnote 3, confirmed again
 here: Option C’s covered-name recognition only matters when a Resource’s
@@ -379,14 +400,7 @@ verbatim-copy loop already did, and C/C1/B all converge on the same
 output once the collision is accounted for. Contrast with <a href="verification-observer-default-translation.md">verification-observer-default-translation.md</a>,
 where this same commit produces a real, and counterproductive,
 behavioral change for this use case.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4"><p>See <code>verification-notranslation.md</code>’s
-footnote 1 for the root cause (bare
-<code>promhttp.Handler()</code>/<code>HandlerFor</code> never enables
-OpenMetrics) and its footnote 4 for why the collector’s
-<code>prometheus_remote_write</code> exporter re-adds a
-<code>_total</code> suffix the design document’s own table doesn’t
-predict for this scenario.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn5"><p>This is the same central finding as
+<li id="fn4"><p>This is the same central finding as
 <code>verification-notranslation.md</code>’s footnote 3, confirmed again
 here: Option C’s covered-name recognition only matters when a Resource’s
 declared identity would otherwise arrive <em>flattened</em>
@@ -398,7 +412,14 @@ same single-spelling <code>attrs.PutStr</code> the old (C1)
 verbatim-copy loop already did, and C/C1/B all converge on the same
 output once the collision is accounted for. Contrast with <a href="verification-observer-default-translation.md">verification-observer-default-translation.md</a>,
 where this same commit produces a real, and counterproductive,
-behavioral change for this use case.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+behavioral change for this use case.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>See <code>verification-notranslation.md</code>’s
+footnote 1 for the root cause (bare
+<code>promhttp.Handler()</code>/<code>HandlerFor</code> never enables
+OpenMetrics) and its footnote 4 for why the collector’s
+<code>prometheus_remote_write</code> exporter re-adds a
+<code>_total</code> suffix the design document’s own table doesn’t
+predict for this scenario.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 <li id="fn6"><p>This is the same central finding as
 <code>verification-notranslation.md</code>’s footnote 3, confirmed again
 here: Option C’s covered-name recognition only matters when a Resource’s

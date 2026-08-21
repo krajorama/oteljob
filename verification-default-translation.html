@@ -237,13 +237,12 @@ default:</p>
 <li>Exporter:
 <code>exporter.prometheusremotewrite.jobInstanceOption{A,B,C,C1}</code></li>
 </ul>
-<p>Only <strong>B, C, and C1</strong> are shown below — Option A is
-omitted (four columns made the tables too wide, and its bare
+<p>Shown below: <strong>Current</strong> (today’s collector behavior, no
+gates enabled) plus <strong>B, C, and C1</strong>. Option A is omitted —
+four option columns plus Current made the tables too wide, and its bare
 <code>job</code>/<code>instance</code> resource attributes aren’t a
-shape that makes sense in the OTel data model to begin with), and so is
-“Today” (no gates), since B/C/C1 already show the no-gates baseline
-implicitly wherever a column doesn’t diverge from it. Option A’s own
-results are unaffected by this update and remain available in git
+shape that makes sense in the OTel data model to begin with. Option A’s
+own results are unaffected by this update and remain available in git
 history.</p>
 <p><strong>Option C1 is new</strong>: as of commit <code>78a1b6d</code>,
 Option C’s receiver-side (<code>AddTargetInfo</code>) gained
@@ -264,7 +263,7 @@ Prometheus) logic; they differ only in what the receiver populates.</p>
 <code>job_name=&quot;my_job&quot;</code>, target <code>oteljob:9464</code>. Egress
 via the collector’s <code>prometheus_remote_write</code> exporter to the
 custom-built Prometheus (<code>prometheus/</code>, branch
-<code>krajo/debug-otlp-rw-endpoint</code>). All three columns were
+<code>krajo/debug-otlp-rw-endpoint</code>). All four columns were
 actually run in the compose stack
 (<code>OTELCOL_FEATURE_GATES=&lt;gate names&gt; docker compose --profile standalone up -d --force-recreate oteljob otel-collector prometheus</code>),
 with Prometheus’s storage wiped between captures; nothing here is
@@ -272,14 +271,16 @@ inferred from source alone.</p>
 <h2 id="results">Results</h2>
 <table>
 <colgroup>
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
-<col style="width: 25%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
+<col style="width: 20%" />
 </colgroup>
 <thead>
 <tr class="header">
 <th style="text-align: left;">Step</th>
+<th style="text-align: left;">Current (no gates)</th>
 <th style="text-align: left;">Option B — namespaced</th>
 <th style="text-align: left;">Option C — declared-first</th>
 <th style="text-align: left;">Option C1 — declared-first, no
@@ -291,38 +292,44 @@ covered-name recognition</th>
 <td style="text-align: left;"><strong>1. OTel metric data model</strong>
 (in-process, SDK; option-independent)</td>
 <td style="text-align: left;"><code>Resource{service.name=&quot;my_service&quot;, service.instance.id=&quot;my_id&quot;}</code><br><code>Scope{name=&quot;foo&quot;, version=&quot;&quot;}</code><br><code>Metric{name=&quot;received_samples&quot;, type=Sum, monotonic=true, temporality=cumulative}</code><br><code>DataPoint{attributes={&quot;a.a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Option B</td>
-<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>2. SDK Prometheus exporter
 exposition</strong> (curled <code>oteljob:9464/metrics</code> directly;
 option-independent)</td>
 <td style="text-align: left;"><code># HELP received_samples_total</code><br><code># TYPE received_samples_total counter</code><br><code>received_samples_total{a_a=&quot;b&quot;,otel_scope_name=&quot;foo&quot;,otel_scope_schema_url=&quot;&quot;,otel_scope_version=&quot;&quot;} 1</code><br><code># HELP target_info Target metadata</code><br><code># TYPE target_info gauge</code><br><code>target_info{service_instance_id=&quot;my_id&quot;,service_name=&quot;my_service&quot;,telemetry_sdk_language=&quot;go&quot;,telemetry_sdk_name=&quot;opentelemetry&quot;,telemetry_sdk_version=&quot;1.45.0&quot;} 1</code></td>
-<td style="text-align: left;">Identical to Option B</td>
-<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>3. Collector
 <code>prometheusreceiver</code> → OTLP Resource</strong> (debug
 exporter, verbosity <code>detailed</code>)</td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{prometheus.job=&quot;my_job&quot;, prometheus.instance=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.name=&quot;my_service&quot;</code></strong><code>,</code><strong><code>service.instance.id=&quot;my_id&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
-— <strong><code>service.name</code>/<code>service.instance.id</code> are
-populated from the flattened <code>target_info</code> labels</strong>,
-and there are no separate
+<td style="text-align: left;"><code>Resource{service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, service.name=&quot;my_job&quot;, service.instance.id=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.name=&quot;my_service&quot;</code></strong><code>,</code><strong><code>service.instance.id=&quot;my_id&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
+— <strong>no job-derived
+<code>service.name</code>/<code>service.instance.id</code></strong>;
+instead the app’s declared identity is populated from the flattened
+<code>target_info</code> labels, with no separate
 <code>service_name</code>/<code>service_instance_id</code> duplicates.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
-<td style="text-align: left;"><code>Resource{prometheus.job=&quot;my_job&quot;, prometheus.instance=&quot;oteljob:9464&quot;, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
-— same shape as Option B minus the job-derived
-<code>service.name</code>/<code>service.instance.id</code>.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;oteljob:9464&quot;</code></strong><code>, server.address=&quot;oteljob&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service_instance_id=&quot;my_id&quot;, service_name=&quot;my_service&quot;</code></strong><code>, telemetry_sdk_language=&quot;go&quot;, telemetry_sdk_name=&quot;opentelemetry&quot;, telemetry_sdk_version=&quot;1.45.0&quot;}</code>
+— same shape as B minus the job-derived
+<code>service.name</code>/<code>service.instance.id</code>; app identity
+stays flattened, unrecognized.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">—
-<code>Metric</code>/<code>DataPoint</code> (same block, all three
+<code>Metric</code>/<code>DataPoint</code> (same block, all four
 columns)</td>
 <td style="text-align: left;"><code>Metric{name=&quot;received_samples_total&quot;, type=Sum, monotonic=true, temporality=cumulative, metadata={prometheus.type=&quot;counter&quot;}}</code><br><code>DataPoint{attributes={&quot;a_a&quot;:&quot;b&quot;}, value=1}</code></td>
-<td style="text-align: left;">Identical to Option B</td>
-<td style="text-align: left;">Identical to Option B</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
+<td style="text-align: left;">Identical to Current</td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>4.
@@ -330,12 +337,14 @@ columns)</td>
 series</strong> (queried Prometheus,
 <code>{path=&quot;remote_write&quot;}</code>)</td>
 <td style="text-align: left;"><code>received_samples_total{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{job=&quot;my_job&quot;, instance=&quot;oteljob:9464&quot;, service_name=&quot;my_service&quot;, service_instance_id=&quot;my_id&quot;, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code></td>
+<td style="text-align: left;"><strong>Byte-identical to Current</strong>
+on both series.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
 <td style="text-align: left;"><code>received_samples_total{</code><strong><code>job=&quot;my_service&quot;, instance=&quot;my_id&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{</code><strong><code>job=&quot;my_service&quot;, instance=&quot;my_id&quot;</code></strong><code>,</code><strong><code>prometheus_job=&quot;my_job&quot;, prometheus_instance=&quot;oteljob:9464&quot;</code></strong><code>, server_address=&quot;oteljob&quot;, server_port=&quot;9464&quot;, url_scheme=&quot;http&quot;, telemetry_sdk_*} 1</code>
 — <strong>the app’s own declared identity now wins</strong>, and the
-scrape pair survives as ordinary <code>target_info</code> metadata.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
-<td style="text-align: left;"><strong>Byte-identical to Option
-B</strong> on both series — this is exactly what the report previously
-called “Option C.”<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
+scrape pair survives as ordinary <code>target_info</code> metadata.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Current</strong>
+on both series — this is exactly what the report previously called
+“Option C.”<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;"><strong>Net effect</strong></td>
@@ -343,6 +352,9 @@ called “Option C.”<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-
 (<code>job</code>/<code>instance</code>) wins on every series; the app’s
 declared identity survives only as <code>target_info</code>
 metadata.</td>
+<td style="text-align: left;">Same wire output as Current; the OTLP
+Resource additionally carries an explicit namespaced pair, invisible on
+the wire.<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a></td>
 <td style="text-align: left;"><strong>This is the first configuration in
 this whole set of reports that achieves true declared-first behavior
 under the default translation strategy.</strong>
@@ -354,7 +366,7 @@ column.</td>
 <td style="text-align: left;">Reproduces the gap the original report
 flagged: the declared-identity check never fires because
 <code>service.name</code>/<code>service.instance.id</code> never arrive
-under that spelling, so the output is indistinguishable from Option
+under that spelling, so the output is indistinguishable from Current and
 B.</td>
 </tr>
 </tbody>
@@ -407,7 +419,18 @@ and writes the canonical dotted key (collapsing agreeing spellings,
 dropping disagreeing ones rather than guessing) — so the same input that
 leaves C1’s Resource with flattened keys leaves C’s Resource with dotted
 ones.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>The exporter-side logic is <em>unchanged</em> from what
+<li id="fn3"><p><code>setJobAndInstanceFromPair</code>-style reasoning
+doesn’t even apply to B here since B’s own pair-first lookup (used
+elsewhere in this series of reports) isn’t what’s active for the
+<em>default</em>, no-gate path — rather, <code>CreateResource</code>
+under Option B stores the namespaced pair <em>alongside</em> the same
+job-derived <code>service.name</code>/<code>service.instance.id</code>
+that Current relies on, and the exporter’s legacy derivation reads the
+latter regardless of gate. Since both hold the same value
+(<code>my_job</code>/<code>oteljob:9464</code>), B’s extra pair is
+invisible on the wire and the two columns are byte-identical in the
+final series.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>The exporter-side logic is <em>unchanged</em> from what
 previously ran as “Option C”: <code>setJobAndInstanceLabels</code>’s
 declared-identity branch simply checks whether
 <code>service.name</code>/<code>service.instance.id</code> (dotted) are
@@ -415,13 +438,24 @@ present on the Resource, and derives
 <code>job</code>/<code>instance</code> from them if so. What changed is
 that the receiver now actually populates those dotted keys under the
 default translation strategy (see [^1]), so this check — which always
-existed — finally has something to find.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn4"><p>This column is exactly what commit
+existed — finally has something to find.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>This column is exactly what commit
 <code>78a1b6d</code>’s message describes: Option C’s old behavior,
 preserved as its own gate. Compare directly against the original report
 content (still in git history) for Option C before this commit — the
 results are identical, because C1 <em>is</em> that old behavior,
-unchanged.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+unchanged.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p><code>setJobAndInstanceFromPair</code>-style reasoning
+doesn’t even apply to B here since B’s own pair-first lookup (used
+elsewhere in this series of reports) isn’t what’s active for the
+<em>default</em>, no-gate path — rather, <code>CreateResource</code>
+under Option B stores the namespaced pair <em>alongside</em> the same
+job-derived <code>service.name</code>/<code>service.instance.id</code>
+that Current relies on, and the exporter’s legacy derivation reads the
+latter regardless of gate. Since both hold the same value
+(<code>my_job</code>/<code>oteljob:9464</code>), B’s extra pair is
+invisible on the wire and the two columns are byte-identical in the
+final series.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </aside>
 </body>
