@@ -229,12 +229,21 @@ metrics about two other applications it observes, each with its own
 <code>job</code>/<code>instance</code> identity — under the SDK’s
 <strong>default</strong> translation strategy, using the
 <code>krajo/job-instance-persistence</code> fork’s Options B, C, and C1
-(rebuilt against commit <code>78a1b6d</code>, “Add POC option C1”; see
-<a href="verification-default-translation.md">verification-default-translation.md</a>
-for why Option A is omitted and what C1 is), alongside
-<strong>Current</strong> (today’s collector behavior, no gates).
-Companion to <a href="verification-observer-notranslation.md">verification-observer-notranslation.md</a>
+(rebuilt against commit <code>53af873</code>; see <a href="verification-default-translation.md">verification-default-translation.md</a>
+for why Option A is omitted), alongside <strong>Current</strong>
+(today’s collector behavior, no gates). Companion to <a href="verification-observer-notranslation.md">verification-observer-notranslation.md</a>
 and the two single-app reports.</p>
+<p><strong>This supersedes the previous version of this report</strong>,
+which was verified against commit <code>78a1b6d</code>. Three commits
+have landed since — see <a href="verification-default-translation.md">verification-default-translation.md</a>
+for the full list — the one that matters here is
+<code>ec7a8eb4f3</code>: Option B’s receiver-side
+<code>CreateResource</code> no longer defaults
+job→<code>service.name</code>/<code>service.instance.id</code>, matching
+C/C1’s “never-derive” behavior. This changes Option B’s OTLP Resource
+shape (point 3) without changing the previously-published wire outcome
+(point 4), and it makes Option B and Option C1 converge completely — see
+the results and footnotes below.</p>
 <p><strong>Implementation</strong>: two
 <code>sdkmetric.MeterProvider</code>s share one
 <code>prometheus.Registry</code>. Each has its own Resource —
@@ -252,23 +261,23 @@ constructed with <code>WithRegisterer(sharedRegistry)</code> and
 attribute <code>a.a=&quot;b&quot;</code>. Scraped by the collector as
 <code>job_name=&quot;observer_job&quot;</code>, target <code>observer:9464</code>,
 <strong><code>honor_labels: true</code></strong>. Egress via
-<code>prometheus_remote_write</code>. Each column was actually run
-(<code>OTELCOL_FEATURE_GATES=&lt;gates&gt; docker compose --profile observer up -d --force-recreate observer otel-collector prometheus</code>),
-with Prometheus’s storage wiped between captures.</p>
+<code>prometheus_remote_write</code> (default translation strategy, so
+none of the new <code>OTELCOL_RW_*</code> env vars are needed here — see
+the <code>NoTranslation</code> companion report for where they matter).
+Each column was actually run
+(<code>OTELCOL_FEATURE_GATES=&lt;gates&gt; docker compose --profile observer down &amp;&amp; ... up -d</code>),
+with Prometheus’s storage wiped between captures by fully recreating the
+stack.</p>
 <p><strong>Methodology note</strong>:
 <code>otelcol-config.compose.yaml</code> keeps <em>both</em> scrape jobs
 configured regardless of active profile; the inactive
 <code>my_job</code>/<code>oteljob:9464</code> target’s benign
 <code>up=0</code> + synthesized <code>target_info</code> is excluded
-from the tables below (see the single-app report’s methodology note for
-why it’s real, not stale, data). Because <code>CreateResource</code>
-runs once per unique <code>(job, instance)</code> pair found in the
-scrape (<code>honor_labels</code> preserves each app’s own labels), the
-collector’s per-app option behavior applies independently to App 1’s
-Resource, App 2’s Resource, <em>and</em> the scrape-metadata Resource
-(<code>observer_job</code>/<code>observer:9464</code>, covering only
-<code>up</code>/<code>scrape_*</code> metrics with no per-app
-<code>job</code>/<code>instance</code> override).</p>
+from the tables below, as is the <code>observer_job</code>
+scrape-metadata Resource’s own <code>up</code>/<code>scrape_*</code>
+series (shown separately as its own row at point 3, since its shape also
+varies by option, but omitted from point 4 since it carries no per-app
+<code>job</code>/<code>instance</code> information).</p>
 <h2 id="results-app-1-shown-app-2-is-byte-for-byte-the-same-shape-with-2-in-place-of-1-throughout">Results
 (App 1 shown; App 2 is byte-for-byte the same shape with <code>2</code>
 in place of <code>1</code> throughout)</h2>
@@ -315,30 +324,29 @@ option-independent)</td>
 <code>prometheusreceiver</code> → OTLP Resource (App 1)</strong> (debug
 exporter, verbosity <code>detailed</code>)</td>
 <td style="text-align: left;"><code>Resource{service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, service.name=&quot;my_job1&quot;, service.instance.id=&quot;my_instance1&quot;, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;, service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.name=&quot;my_service1&quot;</code></strong><code>,</code><strong><code>service.instance.id=&quot;my_id1&quot;</code></strong><code>}</code>
-— <strong>no job-derived
-<code>service.name</code>/<code>service.instance.id</code></strong>;
-instead the app’s declared identity is populated from the flattened
-<code>target_info</code> labels, with no separate
-<code>service_instance_id</code>/<code>service_name</code> duplicates.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
 <td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service_instance_id=&quot;my_id1&quot;, service_name=&quot;my_service1&quot;</code></strong><code>}</code>
-— same shape as B minus the job-derived
-<code>service.name</code>/<code>service.instance.id</code>; app identity
-stays flattened, unrecognized.</td>
+— <strong>no job-derived
+<code>service.name</code>/<code>service.instance.id</code></strong>
+(removed by <code>ec7a8eb4f3</code>); byte-identical to Option C1.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></td>
+<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;my_job1&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;my_instance1&quot;</code></strong><code>, server.address=&quot;my_instance1&quot;, server.port=&quot;&quot;, url.scheme=&quot;http&quot;,</code><strong><code>service.name=&quot;my_service1&quot;</code></strong><code>,</code><strong><code>service.instance.id=&quot;my_id1&quot;</code></strong><code>}</code>
+— covered-name recognition canonicalizes the flattened labels into
+dotted keys.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B.</strong><a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">— scrape-metadata Resource
 (<code>observer_job</code>, no per-app
 <code>job</code>/<code>instance</code>)</td>
 <td style="text-align: left;"><code>Resource{service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
-<td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, service.name=&quot;observer_job&quot;, service.instance.id=&quot;observer:9464&quot;, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code></td>
 <td style="text-align: left;"><code>Resource{</code><strong><code>prometheus.job=&quot;observer_job&quot;</code></strong><code>,</code><strong><code>prometheus.instance=&quot;observer:9464&quot;</code></strong><code>, server.address=&quot;observer&quot;, server.port=&quot;9464&quot;, url.scheme=&quot;http&quot;}</code>
-— <strong>no <code>service.*</code> at all</strong>: unaffected by
-covered-name recognition, since this Resource has no
-<code>target_info</code> sample of its own to recognize anything from.<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a></td>
+— <strong>no job-derived <code>service.*</code> either</strong>, since
+this Resource has no <code>target_info</code> sample for
+<code>AddTargetInfo</code> to act on in the first place.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></td>
 <td style="text-align: left;"><strong>Byte-identical to Option
-C</strong></td>
+B.</strong></td>
+<td style="text-align: left;"><strong>Byte-identical to Option B and
+Option C.</strong></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;">—
@@ -359,10 +367,9 @@ columns)</td>
 on both series.</td>
 <td style="text-align: left;"><code>received_samples_total{</code><strong><code>job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;</code></strong><code>, a_a=&quot;b&quot;, otel_scope_name=&quot;foo&quot;} 1</code><br><code>target_info{</code><strong><code>job=&quot;my_service1&quot;, instance=&quot;my_id1&quot;</code></strong><code>,</code><strong><code>prometheus_job=&quot;my_job1&quot;, prometheus_instance=&quot;my_instance1&quot;</code></strong><code>, server_address=&quot;my_instance1&quot;, url_scheme=&quot;http&quot;} 1</code>
 — <strong>the app’s own identity has replaced the observer’s assigned
-<code>job</code>/<code>instance</code></strong>.<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a></td>
-<td style="text-align: left;"><strong>Byte-identical to Current</strong>
-on both series — this is exactly what the observer was built to
-produce.</td>
+<code>job</code>/<code>instance</code></strong>.<a href="#fn5" class="footnote-ref" id="fnref5" role="doc-noteref"><sup>5</sup></a></td>
+<td style="text-align: left;"><strong>Byte-identical to Option
+B</strong> — i.e., byte-identical to Current too.<a href="#fn6" class="footnote-ref" id="fnref6" role="doc-noteref"><sup>6</sup></a></td>
 </tr>
 <tr class="odd">
 <td style="text-align: left;"><strong>Net effect</strong></td>
@@ -371,21 +378,16 @@ by <code>job</code>/<code>instance</code>
 (<code>my_job1</code>/<code>my_instance1</code>
 vs. <code>my_job2</code>/<code>my_instance2</code>), and each app’s real
 identity is queryable via <code>target_info</code>.</td>
-<td style="text-align: left;">Same wire output as Current; the OTLP
-Resource additionally carries an explicit namespaced pair, invisible on
-the wire.</td>
-<td style="text-align: left;"><strong>Breaks the use case.</strong> App
-1 and App 2’s series now key on their own
-<code>service.name</code>/<code>service.instance.id</code>
-(<code>my_service1</code>/<code>my_id1</code>,
-<code>my_service2</code>/<code>my_id2</code>) — which, unlike the
-single-app report, is the <em>wrong</em> outcome here: the whole point
-of an observer is to assign its own identity to targets it doesn’t
-control, and this fix for the single-app collision actively defeats
-that.</td>
-<td style="text-align: left;">Reproduces the correct, intended output —
-the same output this report’s predecessor already documented under the
-name “Option C.”</td>
+<td style="text-align: left;"><strong>Byte-identical outcome to
+Current</strong> — the observer’s assigned identity wins the series,
+same as before commit <code>ec7a8eb4f3</code>, just via a cleaner
+receiver-side Resource.</td>
+<td style="text-align: left;"><strong>Breaks the use case</strong>,
+unchanged from the previous report: App 1 and App 2’s series now key on
+their own <code>service.name</code>/<code>service.instance.id</code>,
+defeating what the observer is for.</td>
+<td style="text-align: left;"><strong>Now byte-identical to Option B in
+every measured column</strong>, not just on the wire — see <a href="#fn7" class="footnote-ref" id="fnref7" role="doc-noteref"><sup>7</sup></a>.</td>
 </tr>
 </tbody>
 </table>
@@ -393,35 +395,108 @@ name “Option C.”</td>
 <aside id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
 <hr />
 <ol>
-<li id="fn1"><p>Same mechanism as <a href="verification-default-translation.md">verification-default-translation.md</a>’s
-footnote 1, operating on App 1’s own per-series Resource instead of the
-whole scrape target: <code>AddTargetInfo</code>’s covered-name
-recognition (added in commit <code>78a1b6d</code>) canonicalizes the
-flattened <code>service_name</code>/<code>service_instance_id</code>
-labels from App 1’s <code>target_info</code> sample into the dotted
-<code>service.name</code>/<code>service.instance.id</code> keys, which
-<code>CreateResource</code>’s never-derive had left absent.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>This mirrors the previous version of this report’s
-finding about Option C’s scrape-metadata Resource: it has no
-<code>target_info</code> sample of its own (App 1 and App 2’s samples
-are attributed to their own per-series Resources, not this one), so
-there’s nothing for covered-name recognition to act on — it’s genuinely
-service-less under both C and C1, identically.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn3"><p>This is the reverse of the single-app report’s finding,
-and the central result of this one: fixing Option C’s receiver to
-recognize flattened covered names as declared identity is a
-<em>regression</em> for the observer use case specifically. The
-exporter-side check (<code>setJobAndInstanceLabels</code>, unchanged by
-this commit) has always read “declared identity” off the literal
-presence of dotted
-<code>service.name</code>/<code>service.instance.id</code> — it has no
-way to know that in this Resource, the “declaration” isn’t the entity’s
-own honest identity claim but an artifact of an observer app
-deliberately assigning a <em>different</em> identity than the one it’s
-reporting about. Options B and C1 happen to sidestep this because they
-never populate those dotted keys via recognition in the first place;
-Option C actively creates the collision it’s trying to solve elsewhere,
-one layer up.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>Since commit <code>ec7a8eb4f3</code>,
+<code>CreateResource</code> no longer defaults
+job→<code>service.name</code>/<code>service.instance.id</code> for B, C,
+or C1 — all three now start from the same never-derive baseline. B and
+C1 both lack covered-name recognition, so with no recognition step to
+differ on, their receiver-side Resource for App 1/App 2 is now
+byte-identical (previously B additionally carried a job-derived
+<code>service.name</code>/<code>service.instance.id</code> pair that C1
+didn’t). The scrape-metadata Resource has no <code>target_info</code>
+sample of its own for any option to act on, so B, C, and C1 all reduce
+to the same shape there too — this was already true for B vs. C/C1 under
+the old code by coincidence (nothing to default <em>from</em>
+target_info either way), but is now true for the identical underlying
+reason across all three.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>Since commit <code>ec7a8eb4f3</code>,
+<code>CreateResource</code> no longer defaults
+job→<code>service.name</code>/<code>service.instance.id</code> for B, C,
+or C1 — all three now start from the same never-derive baseline. B and
+C1 both lack covered-name recognition, so with no recognition step to
+differ on, their receiver-side Resource for App 1/App 2 is now
+byte-identical (previously B additionally carried a job-derived
+<code>service.name</code>/<code>service.instance.id</code> pair that C1
+didn’t). The scrape-metadata Resource has no <code>target_info</code>
+sample of its own for any option to act on, so B, C, and C1 all reduce
+to the same shape there too — this was already true for B vs. C/C1 under
+the old code by coincidence (nothing to default <em>from</em>
+target_info either way), but is now true for the identical underlying
+reason across all three.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>Since commit <code>ec7a8eb4f3</code>,
+<code>CreateResource</code> no longer defaults
+job→<code>service.name</code>/<code>service.instance.id</code> for B, C,
+or C1 — all three now start from the same never-derive baseline. B and
+C1 both lack covered-name recognition, so with no recognition step to
+differ on, their receiver-side Resource for App 1/App 2 is now
+byte-identical (previously B additionally carried a job-derived
+<code>service.name</code>/<code>service.instance.id</code> pair that C1
+didn’t). The scrape-metadata Resource has no <code>target_info</code>
+sample of its own for any option to act on, so B, C, and C1 all reduce
+to the same shape there too — this was already true for B vs. C/C1 under
+the old code by coincidence (nothing to default <em>from</em>
+target_info either way), but is now true for the identical underlying
+reason across all three.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>Since commit <code>ec7a8eb4f3</code>,
+<code>CreateResource</code> no longer defaults
+job→<code>service.name</code>/<code>service.instance.id</code> for B, C,
+or C1 — all three now start from the same never-derive baseline. B and
+C1 both lack covered-name recognition, so with no recognition step to
+differ on, their receiver-side Resource for App 1/App 2 is now
+byte-identical (previously B additionally carried a job-derived
+<code>service.name</code>/<code>service.instance.id</code> pair that C1
+didn’t). The scrape-metadata Resource has no <code>target_info</code>
+sample of its own for any option to act on, so B, C, and C1 all reduce
+to the same shape there too — this was already true for B vs. C/C1 under
+the old code by coincidence (nothing to default <em>from</em>
+target_info either way), but is now true for the identical underlying
+reason across all three.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn5"><p>The exporter-side logic
+(<code>setJobAndInstanceLabels</code>) is unchanged by any of the three
+recent commits: Option C’s declared-identity branch checks whether
+<code>service.name</code>/<code>service.instance.id</code> are present
+and, if so, always derives <code>job</code>/<code>instance</code> from
+them — this is what “breaks” the observer use case, exactly as
+documented previously. What’s new is that Option B’s <em>series</em>
+output is now provably a receiver-side-only change:
+<code>CreateResource</code> no longer needs to default job-derived
+<code>service.name</code>/<code>service.instance.id</code> for the
+namespaced pair to win at the exporter
+(<code>setJobAndInstanceFromPair</code> looks up
+<code>prometheus.job</code>/<code>prometheus.instance</code> directly,
+unconditionally on anything else in the Resource), so removing that
+defaulting was safe — the wire output for B was never actually depending
+on it.<a href="#fnref5" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn6"><p>The exporter-side logic
+(<code>setJobAndInstanceLabels</code>) is unchanged by any of the three
+recent commits: Option C’s declared-identity branch checks whether
+<code>service.name</code>/<code>service.instance.id</code> are present
+and, if so, always derives <code>job</code>/<code>instance</code> from
+them — this is what “breaks” the observer use case, exactly as
+documented previously. What’s new is that Option B’s <em>series</em>
+output is now provably a receiver-side-only change:
+<code>CreateResource</code> no longer needs to default job-derived
+<code>service.name</code>/<code>service.instance.id</code> for the
+namespaced pair to win at the exporter
+(<code>setJobAndInstanceFromPair</code> looks up
+<code>prometheus.job</code>/<code>prometheus.instance</code> directly,
+unconditionally on anything else in the Resource), so removing that
+defaulting was safe — the wire output for B was never actually depending
+on it.<a href="#fnref6" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn7"><p>Since commit <code>ec7a8eb4f3</code>,
+<code>CreateResource</code> no longer defaults
+job→<code>service.name</code>/<code>service.instance.id</code> for B, C,
+or C1 — all three now start from the same never-derive baseline. B and
+C1 both lack covered-name recognition, so with no recognition step to
+differ on, their receiver-side Resource for App 1/App 2 is now
+byte-identical (previously B additionally carried a job-derived
+<code>service.name</code>/<code>service.instance.id</code> pair that C1
+didn’t). The scrape-metadata Resource has no <code>target_info</code>
+sample of its own for any option to act on, so B, C, and C1 all reduce
+to the same shape there too — this was already true for B vs. C/C1 under
+the old code by coincidence (nothing to default <em>from</em>
+target_info either way), but is now true for the identical underlying
+reason across all three.<a href="#fnref7" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </aside>
 </body>
