@@ -25,6 +25,8 @@ exporters:
       insecure: true
     external_labels:
       path: remote_write
+    translation_strategy: ${env:OTELCOL_RW_TRANSLATION_STRATEGY}
+    protobuf_message: ${env:OTELCOL_RW_PROTOBUF_MESSAGE}
 
 service:
   pipelines:

@@ -26,6 +26,9 @@ services:
       - prometheus
     volumes:
       - ./otelcol-config.compose.yaml:/etc/otelcol-contrib/config.yaml:ro
+    environment:
+      - OTELCOL_RW_TRANSLATION_STRATEGY=${OTELCOL_RW_TRANSLATION_STRATEGY:-UnderscoreEscapingWithSuffixes}
+      - OTELCOL_RW_PROTOBUF_MESSAGE=${OTELCOL_RW_PROTOBUF_MESSAGE:-prometheus.WriteRequest}
     command:
       - --config=/etc/otelcol-contrib/config.yaml
       - --feature-gates=${OTELCOL_FEATURE_GATES:-}
